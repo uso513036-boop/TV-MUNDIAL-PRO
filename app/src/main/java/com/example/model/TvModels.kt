@@ -1,0 +1,93 @@
+package com.example.model
+
+enum class Country(
+    val code: String,
+    val displayName: String,
+    val flag: String,
+    val timeZone: String
+) {
+    PERU("PE", "Perú", "🇵🇪", "America/Lima"),
+    COSTA_RICA("CR", "Costa Rica", "🇨🇷", "America/Costa_Rica")
+}
+
+enum class TvCategory(val displayName: String, val iconName: String) {
+    TODOS("Todos", "apps"),
+    NOTICIAS("Noticias", "newspaper"),
+    ENTRETENIMIENTO("Entretenimiento", "movie"),
+    DEPORTES("Deportes", "sports_soccer"),
+    CULTURA("Cultura", "school"),
+    MUSICA("Música", "music_note"),
+    INFANTIL("Infantil", "child_care")
+}
+
+data class ProgramItem(
+    val id: String,
+    val title: String,
+    val description: String,
+    val category: TvCategory,
+    val startTime: String, // format "HH:mm" e.g. "07:00"
+    val endTime: String,   // format "HH:mm" e.g. "08:30"
+    val startMinutes: Int, // minutes from 00:00 (e.g. 7 * 60 = 420)
+    val endMinutes: Int,   // minutes from 00:00
+    val rating: String = "TP", // "TP", "+14", "+18"
+    val hostOrStar: String = "",
+    val isReminderSet: Boolean = false
+) {
+    fun isCurrentlyAiring(currentMinutes: Int): Boolean {
+        return if (endMinutes > startMinutes) {
+            currentMinutes in startMinutes until endMinutes
+        } else {
+            // Over midnight
+            currentMinutes >= startMinutes || currentMinutes < endMinutes
+        }
+    }
+
+    fun getProgressPercent(currentMinutes: Int): Float {
+        val total = if (endMinutes > startMinutes) {
+            endMinutes - startMinutes
+        } else {
+            (24 * 60 - startMinutes) + endMinutes
+        }
+        if (total <= 0) return 0f
+
+        val elapsed = if (endMinutes > startMinutes) {
+            (currentMinutes - startMinutes).coerceIn(0, total)
+        } else {
+            if (currentMinutes >= startMinutes) {
+                (currentMinutes - startMinutes).coerceIn(0, total)
+            } else {
+                (24 * 60 - startMinutes + currentMinutes).coerceIn(0, total)
+            }
+        }
+        return (elapsed.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+    }
+}
+
+data class Channel(
+    val id: String,
+    val number: Int,
+    val name: String,
+    val country: Country,
+    val category: TvCategory,
+    val streamUrl: String,
+    val backupStreamUrls: List<String> = emptyList(),
+    val logoText: String,
+    val brandColorHex: Long = 0xFF00E5FF,
+    val description: String,
+    val broadcastQuality: String = "HD 1080p",
+    val schedule: List<ProgramItem>,
+    val isFavorite: Boolean = false
+) {
+    fun getCurrentProgram(currentMinutes: Int): ProgramItem? {
+        return schedule.find { it.isCurrentlyAiring(currentMinutes) } ?: schedule.firstOrNull()
+    }
+
+    fun getNextProgram(currentMinutes: Int): ProgramItem? {
+        val currentIndex = schedule.indexOfFirst { it.isCurrentlyAiring(currentMinutes) }
+        return if (currentIndex != -1 && currentIndex + 1 < schedule.size) {
+            schedule[currentIndex + 1]
+        } else if (schedule.size > 1) {
+            schedule[1]
+        } else null
+    }
+}

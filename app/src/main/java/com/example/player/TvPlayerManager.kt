@@ -1,0 +1,187 @@
+package com.example.player
+
+import android.content.Context
+import androidx.annotation.OptIn
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.ExoPlayer
+import com.example.model.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+data class VideoPlaybackState(
+    val isPlaying: Boolean = false,
+    val isBuffering: Boolean = false,
+    val hasError: Boolean = false,
+    val errorMessage: String? = null,
+    val isMuted: Boolean = false,
+    val volume: Float = 1.0f,
+    val activeStreamUrl: String = "",
+    val isUsingBackup: Boolean = false,
+    val resizeMode: Int = 0 // 0 = FIT, 3 = FILL, 4 = ZOOM
+)
+
+@OptIn(UnstableApi::class)
+class TvPlayerManager(private val context: Context) {
+
+    private var exoPlayer: ExoPlayer? = null
+    private var currentChannel: Channel? = null
+    private var currentStreamIndex = 0
+
+    private val _playbackState = MutableStateFlow(VideoPlaybackState())
+    val playbackState: StateFlow<VideoPlaybackState> = _playbackState.asStateFlow()
+
+    fun getPlayer(): ExoPlayer {
+        if (exoPlayer == null) {
+            val loadControl = DefaultLoadControl.Builder()
+                .setBufferDurationsMs(
+                    15000, // minBufferMs: safe buffer for smooth live stream playback
+                    30000, // maxBufferMs
+                    1500,  // bufferForPlaybackMs: starts playing after 1.5s
+                    2500   // bufferForPlaybackAfterRebufferMs: resumes after 2.5s
+                )
+                .build()
+
+            exoPlayer = ExoPlayer.Builder(context)
+                .setLoadControl(loadControl)
+                .build()
+                .apply {
+                    repeatMode = Player.REPEAT_MODE_OFF
+                    playWhenReady = true
+                    addListener(object : Player.Listener {
+                        override fun onPlaybackStateChanged(playbackState: Int) {
+                            val buffering = playbackState == Player.STATE_BUFFERING
+                            val playing = isPlaying && playbackState == Player.STATE_READY
+                            _playbackState.value = _playbackState.value.copy(
+                                isBuffering = buffering,
+                                isPlaying = playing,
+                                hasError = false,
+                                errorMessage = null
+                            )
+                        }
+
+                        override fun onIsPlayingChanged(isPlaying: Boolean) {
+                            _playbackState.value = _playbackState.value.copy(isPlaying = isPlaying)
+                        }
+
+                        override fun onPlayerError(error: PlaybackException) {
+                            handlePlaybackError(error)
+                        }
+                    })
+                }
+        }
+        return exoPlayer!!
+    }
+
+    fun playChannel(channel: Channel) {
+        currentChannel = channel
+        currentStreamIndex = 0
+        loadStream(channel.streamUrl, isBackup = false)
+    }
+
+    private fun loadStream(url: String, isBackup: Boolean) {
+        val player = getPlayer()
+        _playbackState.value = _playbackState.value.copy(
+            isBuffering = true,
+            hasError = false,
+            errorMessage = null,
+            activeStreamUrl = url,
+            isUsingBackup = isBackup
+        )
+
+        try {
+            val mediaItem = MediaItem.Builder()
+                .setUri(url)
+                .build()
+            player.setMediaItem(mediaItem)
+            player.prepare()
+            player.play()
+        } catch (e: Exception) {
+            handlePlaybackError(null)
+        }
+    }
+
+    private fun handlePlaybackError(error: PlaybackException?) {
+        val channel = currentChannel ?: return
+        val backups = channel.backupStreamUrls
+
+        if (currentStreamIndex < backups.size) {
+            val nextUrl = backups[currentStreamIndex]
+            currentStreamIndex++
+            _playbackState.value = _playbackState.value.copy(
+                isBuffering = true,
+                errorMessage = "Cambiando a servidor de respaldo...",
+                hasError = false
+            )
+            loadStream(nextUrl, isBackup = true)
+        } else {
+            _playbackState.value = _playbackState.value.copy(
+                isBuffering = false,
+                isPlaying = false,
+                hasError = true,
+                errorMessage = "Señal en reconexión. Toca 'Reintentar' para recargar la señal."
+            )
+        }
+    }
+
+    fun retryPlayback() {
+        val channel = currentChannel ?: return
+        currentStreamIndex = 0
+        loadStream(channel.streamUrl, isBackup = false)
+    }
+
+    fun togglePlayPause() {
+        val player = exoPlayer ?: return
+        if (player.isPlaying) {
+            player.pause()
+        } else {
+            player.play()
+        }
+    }
+
+    fun toggleMute() {
+        val player = exoPlayer ?: return
+        val currentMute = _playbackState.value.isMuted
+        if (currentMute) {
+            player.volume = 1.0f
+            _playbackState.value = _playbackState.value.copy(isMuted = false, volume = 1.0f)
+        } else {
+            player.volume = 0.0f
+            _playbackState.value = _playbackState.value.copy(isMuted = true, volume = 0.0f)
+        }
+    }
+
+    fun setVolume(volume: Float) {
+        val player = exoPlayer ?: return
+        val clamped = volume.coerceIn(0f, 1f)
+        player.volume = clamped
+        _playbackState.value = _playbackState.value.copy(volume = clamped, isMuted = clamped == 0f)
+    }
+
+    fun cycleResizeMode() {
+        // 0: FIT (proporción original), 3: FILL (llenar pantalla), 4: ZOOM (recorte cinematográfico)
+        val nextMode = when (_playbackState.value.resizeMode) {
+            0 -> 3
+            3 -> 4
+            else -> 0
+        }
+        _playbackState.value = _playbackState.value.copy(resizeMode = nextMode)
+    }
+
+    fun pause() {
+        exoPlayer?.pause()
+    }
+
+    fun resume() {
+        exoPlayer?.play()
+    }
+
+    fun release() {
+        exoPlayer?.release()
+        exoPlayer = null
+    }
+}
