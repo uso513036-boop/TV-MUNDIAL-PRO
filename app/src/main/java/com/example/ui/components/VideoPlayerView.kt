@@ -1,7 +1,10 @@
 package com.example.ui.components
 
+import android.content.Context
+import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import com.example.R
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -24,14 +27,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.VolumeMute
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
@@ -56,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,7 +85,13 @@ fun VideoPlayerView(
     onPreviousChannel: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val prefs = remember(context) {
+        context.getSharedPreferences("tv_mundial_player_prefs", Context.MODE_PRIVATE)
+    }
+
     var showControls by remember { mutableStateOf(true) }
+    var showFullscreenSwipeHint by remember { mutableStateOf(false) }
 
     // Ocultar controles automáticamente tras 3.5 segundos de inactividad
     LaunchedEffect(showControls, channel.id) {
@@ -93,12 +101,28 @@ fun VideoPlayerView(
         }
     }
 
+    // Mostrar aviso una sola vez al entrar por primera vez a pantalla completa
+    LaunchedEffect(isFullscreen) {
+        if (isFullscreen) {
+            val hasSeen = prefs.getBoolean("has_seen_fullscreen_swipe_hint", false)
+            if (!hasSeen) {
+                showFullscreenSwipeHint = true
+                delay(3800)
+                showFullscreenSwipeHint = false
+                prefs.edit().putBoolean("has_seen_fullscreen_swipe_hint", true).apply()
+            }
+        } else {
+            showFullscreenSwipeHint = false
+        }
+    }
+
     Box(
         modifier = modifier
             .background(Color.Black)
             .pointerInput(channel.id) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
+                    var totalDragX = 0f
                     var totalDragY = 0f
                     var hasDragged = false
                     val pointerId = down.id
@@ -109,14 +133,24 @@ fun VideoPlayerView(
                         if (dragChange == null || !dragChange.pressed) {
                             val wasConsumedByChild = dragChange?.isConsumed ?: false
                             if (hasDragged) {
-                                if (totalDragY < -40f) {
-                                    // Deslizar hacia arriba -> Canal siguiente
-                                    onNextChannel()
-                                    showControls = true
-                                } else if (totalDragY > 40f) {
-                                    // Deslizar hacia abajo -> Canal anterior
-                                    onPreviousChannel()
-                                    showControls = true
+                                // Prioridad de deslizamiento horizontal a los lados (izquierda = siguiente, derecha = anterior)
+                                if (abs(totalDragX) >= abs(totalDragY)) {
+                                    if (totalDragX < -40f) {
+                                        onNextChannel()
+                                        showControls = true
+                                    } else if (totalDragX > 40f) {
+                                        onPreviousChannel()
+                                        showControls = true
+                                    }
+                                } else {
+                                    // Deslizamiento vertical alternativo (arriba = siguiente, abajo = anterior)
+                                    if (totalDragY < -40f) {
+                                        onNextChannel()
+                                        showControls = true
+                                    } else if (totalDragY > 40f) {
+                                        onPreviousChannel()
+                                        showControls = true
+                                    }
                                 }
                             } else if (!wasConsumedByChild) {
                                 // Tocar la pantalla -> Mostrar / ocultar controles
@@ -124,9 +158,11 @@ fun VideoPlayerView(
                             }
                             break
                         } else {
-                            val delta = dragChange.position.y - dragChange.previousPosition.y
-                            totalDragY += delta
-                            if (abs(totalDragY) > 25f) {
+                            val deltaX = dragChange.position.x - dragChange.previousPosition.x
+                            val deltaY = dragChange.position.y - dragChange.previousPosition.y
+                            totalDragX += deltaX
+                            totalDragY += deltaY
+                            if (abs(totalDragX) > 25f || abs(totalDragY) > 25f) {
                                 hasDragged = true
                                 dragChange.consume()
                             }
@@ -136,22 +172,27 @@ fun VideoPlayerView(
             }
             .testTag("video_player_container")
     ) {
-        // Embedded Android Media3 PlayerView - Ajuste automático de aspecto (16:9 original por defecto)
+        // Embedded Android Media3 PlayerView con TextureView (evita conflictos de recursos CCodec y fallos de superficie)
         AndroidView(
             factory = { ctx ->
-                PlayerView(ctx).apply {
+                val view = LayoutInflater.from(ctx).inflate(R.layout.exo_player_view, null, false) as PlayerView
+                view.apply {
                     layoutParams = FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
-                    useController = false // Custom simplified Compose controls
                     player = playerManager.getPlayer()
                     resizeMode = playbackState.resizeMode
                 }
             },
             update = { playerView ->
-                playerView.player = playerManager.getPlayer()
+                if (playerView.player != playerManager.getPlayer()) {
+                    playerView.player = playerManager.getPlayer()
+                }
                 playerView.resizeMode = playbackState.resizeMode
+            },
+            onRelease = { playerView ->
+                playerView.player = null
             },
             modifier = Modifier.fillMaxSize()
         )
@@ -307,83 +348,41 @@ fun VideoPlayerView(
                         }
                     }
                 }
+            }
+        }
 
-                // Left: Previous Channel Arrow Button (desaparece a los pocos segundos con los controles)
-                Surface(
-                    onClick = {
-                        onPreviousChannel()
-                        showControls = true
-                    },
-                    shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.65f),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.35f)),
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(start = if (isFullscreen) 24.dp else 10.dp)
-                        .size(48.dp)
-                        .testTag("player_prev_channel_button")
+        // Aviso una sola vez al entrar a pantalla completa (sin flechas que estorben)
+        AnimatedVisibility(
+            visible = showFullscreenSwipeHint,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp)
+        ) {
+            Surface(
+                color = Color.Black.copy(alpha = 0.8f),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, Color(0xFF00E5FF).copy(alpha = 0.5f)),
+                modifier = Modifier.testTag("fullscreen_swipe_hint")
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.ChevronLeft,
-                            contentDescription = "Canal anterior",
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                }
-
-                // Right: Next Channel Arrow Button (desaparece a los pocos segundos con los controles)
-                Surface(
-                    onClick = {
-                        onNextChannel()
-                        showControls = true
-                    },
-                    shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.65f),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.35f)),
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(end = if (isFullscreen) 24.dp else 10.dp)
-                        .size(48.dp)
-                        .testTag("player_next_channel_button")
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = "Canal siguiente",
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                }
-
-                // Bottom: Floating indicator with gesture hint (helpful and unobtrusive)
-                Surface(
-                    color = Color.Black.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = if (isFullscreen) 16.dp else 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SwapVert,
-                            contentDescription = null,
-                            tint = Color(0xFF00E5FF),
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Text(
-                            text = "Desliza ↑ ↓ para cambiar de canal",
-                            color = Color.White.copy(alpha = 0.9f),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.SwapHoriz,
+                        contentDescription = null,
+                        tint = Color(0xFF00E5FF),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "Desliza a los lados para cambiar de canal",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
         }

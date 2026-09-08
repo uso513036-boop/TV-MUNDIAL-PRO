@@ -113,6 +113,8 @@ class TvPlayerManager(context: Context) {
         )
 
         try {
+            player.stop()
+            player.clearMediaItems()
             val mediaItemBuilder = MediaItem.Builder().setUri(url)
             if (url.contains(".m3u8", ignoreCase = true)) {
                 mediaItemBuilder.setMimeType(MimeTypes.APPLICATION_M3U8)
