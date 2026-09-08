@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.example.model.Channel
 import com.example.player.TvPlayerManager
@@ -110,11 +111,17 @@ fun VideoPlayerView(
                     )
                     useController = false // Custom simplified Compose controls
                     player = playerManager.getPlayer()
+                    resizeMode = playbackState.resizeMode
                 }
             },
             update = { playerView ->
                 playerView.player = playerManager.getPlayer()
-                playerView.resizeMode = playbackState.resizeMode
+                // Escalar a 16:9 / pantalla completa para aprovechar toda la pantalla sin bordes negros
+                playerView.resizeMode = if (isFullscreen && playbackState.resizeMode == AspectRatioFrameLayout.RESIZE_MODE_FIT) {
+                    AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                } else {
+                    playbackState.resizeMode
+                }
             },
             modifier = Modifier.fillMaxSize()
         )
@@ -196,12 +203,12 @@ fun VideoPlayerView(
                         )
                     )
             ) {
-                // Top: Channel Title (left) & EN VIVO badge + secondary menu (right)
+                // Top: Channel Title (left) & Secondary menu (right)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.TopCenter)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -216,118 +223,111 @@ fun VideoPlayerView(
                         modifier = Modifier.weight(1f, fill = false)
                     )
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        // EN VIVO badge
-                        Surface(
-                            color = Color(0xFFFF1744),
-                            shape = RoundedCornerShape(4.dp)
+                    // Secondary actions grouped in a clean overflow menu
+                    Box {
+                        IconButton(
+                            onClick = { showExtraMenu = true },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .testTag("player_more_options")
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "EN VIVO",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 10.sp,
-                                    letterSpacing = 0.5.sp
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "Opciones",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
                         }
 
-                        // Secondary actions grouped in a clean overflow menu
-                        Box {
-                            IconButton(
-                                onClick = { showExtraMenu = true },
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .testTag("player_more_options")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "Opciones",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            DropdownMenu(
-                                expanded = showExtraMenu,
-                                onDismissRequest = { showExtraMenu = false },
-                                modifier = Modifier.background(Color(0xFF1E293B))
-                            ) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            if (playbackState.isMuted) "Activar sonido" else "Silenciar",
-                                            color = Color.White,
-                                            fontSize = 13.sp
-                                        )
-                                    },
-                                    onClick = {
-                                        playerManager.toggleMute()
-                                        showExtraMenu = false
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = if (playbackState.isMuted) Icons.Default.VolumeMute else Icons.Default.VolumeUp,
-                                            contentDescription = null,
-                                            tint = Color(0xFF00E5FF)
-                                        )
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            if (isFullscreen) "Salir pantalla completa" else "Pantalla completa",
-                                            color = Color.White,
-                                            fontSize = 13.sp
-                                        )
-                                    },
-                                    onClick = {
-                                        onToggleFullscreen()
-                                        showExtraMenu = false
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                                            contentDescription = null,
-                                            tint = Color(0xFF00E5FF)
-                                        )
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            "Recargar señal",
-                                            color = Color.White,
-                                            fontSize = 13.sp
-                                        )
-                                    },
-                                    onClick = {
-                                        playerManager.retryPlayback()
-                                        showExtraMenu = false
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Default.Refresh,
-                                            contentDescription = null,
-                                            tint = Color(0xFF00E5FF)
-                                        )
-                                    }
-                                )
-                            }
+                        DropdownMenu(
+                            expanded = showExtraMenu,
+                            onDismissRequest = { showExtraMenu = false },
+                            modifier = Modifier.background(Color(0xFF1E293B))
+                        ) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        when (playbackState.resizeMode) {
+                                            AspectRatioFrameLayout.RESIZE_MODE_ZOOM -> "Formato: 16:9 Pantalla completa"
+                                            AspectRatioFrameLayout.RESIZE_MODE_FILL -> "Formato: Estirar"
+                                            else -> "Formato: Ajustar con bordes"
+                                        },
+                                        color = Color.White,
+                                        fontSize = 13.sp
+                                    )
+                                },
+                                onClick = {
+                                    playerManager.cycleResizeMode()
+                                    showExtraMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Fullscreen,
+                                        contentDescription = null,
+                                        tint = Color(0xFF00E5FF)
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        if (playbackState.isMuted) "Activar sonido" else "Silenciar",
+                                        color = Color.White,
+                                        fontSize = 13.sp
+                                    )
+                                },
+                                onClick = {
+                                    playerManager.toggleMute()
+                                    showExtraMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = if (playbackState.isMuted) Icons.Default.VolumeMute else Icons.Default.VolumeUp,
+                                        contentDescription = null,
+                                        tint = Color(0xFF00E5FF)
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        if (isFullscreen) "Salir pantalla completa" else "Pantalla completa",
+                                        color = Color.White,
+                                        fontSize = 13.sp
+                                    )
+                                },
+                                onClick = {
+                                    onToggleFullscreen()
+                                    showExtraMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                                        contentDescription = null,
+                                        tint = Color(0xFF00E5FF)
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        "Recargar señal",
+                                        color = Color.White,
+                                        fontSize = 13.sp
+                                    )
+                                },
+                                onClick = {
+                                    playerManager.retryPlayback()
+                                    showExtraMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = null,
+                                        tint = Color(0xFF00E5FF)
+                                    )
+                                }
+                            )
                         }
                     }
                 }

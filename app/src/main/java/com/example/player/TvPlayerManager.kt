@@ -26,7 +26,7 @@ data class VideoPlaybackState(
     val volume: Float = 1.0f,
     val activeStreamUrl: String = "",
     val isUsingBackup: Boolean = false,
-    val resizeMode: Int = 0 // 0 = FIT, 3 = FILL, 4 = ZOOM
+    val resizeMode: Int = 4 // 4 = ZOOM (escala a 16:9 / pantalla completa sin bordes negros), 3 = FILL, 0 = FIT
 )
 
 @OptIn(UnstableApi::class)
@@ -177,12 +177,16 @@ class TvPlayerManager(private val context: Context) {
         _playbackState.value = _playbackState.value.copy(volume = clamped, isMuted = clamped == 0f)
     }
 
+    fun setResizeMode(mode: Int) {
+        _playbackState.value = _playbackState.value.copy(resizeMode = mode)
+    }
+
     fun cycleResizeMode() {
-        // 0: FIT (proporción original), 3: FILL (llenar pantalla), 4: ZOOM (recorte cinematográfico)
+        // 4: ZOOM (16:9 / aprovecha pantalla sin bordes), 3: FILL (estirar), 0: FIT (original)
         val nextMode = when (_playbackState.value.resizeMode) {
-            0 -> 3
-            3 -> 4
-            else -> 0
+            4 -> 3
+            3 -> 0
+            else -> 4
         }
         _playbackState.value = _playbackState.value.copy(resizeMode = nextMode)
     }
