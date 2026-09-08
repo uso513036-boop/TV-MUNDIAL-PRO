@@ -2,6 +2,8 @@ package com.example.ui
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.os.Build
+import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -65,6 +67,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.model.Country
 import com.example.player.TvPlayerManager
@@ -103,20 +108,52 @@ fun TvMundialApp(
         }
     }
 
-    // Handle screen orientation on fullscreen
+    // Handle screen orientation and immersive fullscreen (hiding system status & navigation bars)
     LaunchedEffect(uiState.isFullscreen) {
-        if (uiState.isFullscreen) {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        } else {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        val window = activity?.window
+        if (window != null) {
+            val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+            if (uiState.isFullscreen) {
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                insetsController.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                insetsController.hide(WindowInsetsCompat.Type.systemBars())
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    window.attributes = window.attributes.apply {
+                        layoutInDisplayCutoutMode =
+                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                    }
+                }
+            } else {
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                insetsController.show(WindowInsetsCompat.Type.systemBars())
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    window.attributes = window.attributes.apply {
+                        layoutInDisplayCutoutMode =
+                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
+                    }
+                }
+            }
         }
     }
 
-    // Clean up player on leave
+    // Clean up player and restore system bars on leave
     DisposableEffect(Unit) {
         onDispose {
             playerManager.release()
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            activity?.let { act ->
+                act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                val insetsController = WindowCompat.getInsetsController(act.window, act.window.decorView)
+                insetsController.show(WindowInsetsCompat.Type.systemBars())
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    act.window.attributes = act.window.attributes.apply {
+                        layoutInDisplayCutoutMode =
+                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
+                    }
+                }
+            }
         }
     }
 
