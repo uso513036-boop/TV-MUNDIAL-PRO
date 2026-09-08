@@ -1,10 +1,8 @@
 package com.example.ui.components
 
 import android.content.Context
-import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import com.example.R
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -172,15 +170,15 @@ fun VideoPlayerView(
             }
             .testTag("video_player_container")
     ) {
-        // Embedded Android Media3 PlayerView con TextureView (evita conflictos de recursos CCodec y fallos de superficie)
+        // Embedded Android Media3 PlayerView
         AndroidView(
             factory = { ctx ->
-                val view = LayoutInflater.from(ctx).inflate(R.layout.exo_player_view, null, false) as PlayerView
-                view.apply {
+                PlayerView(ctx).apply {
                     layoutParams = FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
+                    useController = false
                     player = playerManager.getPlayer()
                     resizeMode = playbackState.resizeMode
                 }

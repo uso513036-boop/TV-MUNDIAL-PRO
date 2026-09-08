@@ -20,6 +20,15 @@ class ExampleRobolectricTest {
   }
 
   @Test
+  fun `launch MainActivity`() {
+    androidx.test.core.app.ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+      scenario.onActivity { activity ->
+        org.junit.Assert.assertNotNull(activity)
+      }
+    }
+  }
+
+  @Test
   fun `tvPlayerManager initializes player without error`() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val manager = com.example.player.TvPlayerManager(context)
