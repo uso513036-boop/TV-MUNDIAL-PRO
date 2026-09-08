@@ -26,7 +26,7 @@ data class VideoPlaybackState(
     val volume: Float = 1.0f,
     val activeStreamUrl: String = "",
     val isUsingBackup: Boolean = false,
-    val resizeMode: Int = 4 // 4 = ZOOM (escala a 16:9 / pantalla completa sin bordes negros), 3 = FILL, 0 = FIT
+    val resizeMode: Int = 0 // 0 = FIT (ajuste automático: muestra 100% de la imagen sin recortar ni deformar)
 )
 
 @OptIn(UnstableApi::class)

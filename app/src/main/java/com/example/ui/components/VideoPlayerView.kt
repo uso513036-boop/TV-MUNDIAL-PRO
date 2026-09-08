@@ -80,7 +80,6 @@ fun VideoPlayerView(
     modifier: Modifier = Modifier
 ) {
     var showControls by remember { mutableStateOf(true) }
-    var showExtraMenu by remember { mutableStateOf(false) }
 
     // Auto-hide controls after 4 seconds when playing
     LaunchedEffect(showControls, playbackState.isPlaying) {
@@ -101,7 +100,7 @@ fun VideoPlayerView(
             }
             .testTag("video_player_container")
     ) {
-        // Embedded Android Media3 PlayerView
+        // Embedded Android Media3 PlayerView - Ajuste automático de aspecto (sin recortar ni estirar)
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
@@ -111,17 +110,12 @@ fun VideoPlayerView(
                     )
                     useController = false // Custom simplified Compose controls
                     player = playerManager.getPlayer()
-                    resizeMode = playbackState.resizeMode
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                 }
             },
             update = { playerView ->
                 playerView.player = playerManager.getPlayer()
-                // Escalar a 16:9 / pantalla completa para aprovechar toda la pantalla sin bordes negros
-                playerView.resizeMode = if (isFullscreen && playbackState.resizeMode == AspectRatioFrameLayout.RESIZE_MODE_FIT) {
-                    AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                } else {
-                    playbackState.resizeMode
-                }
+                playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
             },
             modifier = Modifier.fillMaxSize()
         )
@@ -203,7 +197,7 @@ fun VideoPlayerView(
                         )
                     )
             ) {
-                // Top: Channel Title (left) & Secondary menu (right)
+                // Top: Channel Title (left) & Direct Quick Action Buttons (right)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -223,110 +217,36 @@ fun VideoPlayerView(
                         modifier = Modifier.weight(1f, fill = false)
                     )
 
-                    // Secondary actions grouped in a clean overflow menu
-                    Box {
+                    // Direct controls: Mute and Fullscreen toggle (sin menú de opciones de formato)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         IconButton(
-                            onClick = { showExtraMenu = true },
+                            onClick = { playerManager.toggleMute() },
                             modifier = Modifier
                                 .size(36.dp)
-                                .testTag("player_more_options")
+                                .testTag("player_mute_button")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = "Opciones",
+                                imageVector = if (playbackState.isMuted) Icons.Default.VolumeMute else Icons.Default.VolumeUp,
+                                contentDescription = if (playbackState.isMuted) "Activar sonido" else "Silenciar",
                                 tint = Color.White,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
 
-                        DropdownMenu(
-                            expanded = showExtraMenu,
-                            onDismissRequest = { showExtraMenu = false },
-                            modifier = Modifier.background(Color(0xFF1E293B))
+                        IconButton(
+                            onClick = { onToggleFullscreen() },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .testTag("player_fullscreen_button")
                         ) {
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        when (playbackState.resizeMode) {
-                                            AspectRatioFrameLayout.RESIZE_MODE_ZOOM -> "Formato: 16:9 Pantalla completa"
-                                            AspectRatioFrameLayout.RESIZE_MODE_FILL -> "Formato: Estirar"
-                                            else -> "Formato: Ajustar con bordes"
-                                        },
-                                        color = Color.White,
-                                        fontSize = 13.sp
-                                    )
-                                },
-                                onClick = {
-                                    playerManager.cycleResizeMode()
-                                    showExtraMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Fullscreen,
-                                        contentDescription = null,
-                                        tint = Color(0xFF00E5FF)
-                                    )
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        if (playbackState.isMuted) "Activar sonido" else "Silenciar",
-                                        color = Color.White,
-                                        fontSize = 13.sp
-                                    )
-                                },
-                                onClick = {
-                                    playerManager.toggleMute()
-                                    showExtraMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = if (playbackState.isMuted) Icons.Default.VolumeMute else Icons.Default.VolumeUp,
-                                        contentDescription = null,
-                                        tint = Color(0xFF00E5FF)
-                                    )
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        if (isFullscreen) "Salir pantalla completa" else "Pantalla completa",
-                                        color = Color.White,
-                                        fontSize = 13.sp
-                                    )
-                                },
-                                onClick = {
-                                    onToggleFullscreen()
-                                    showExtraMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                                        contentDescription = null,
-                                        tint = Color(0xFF00E5FF)
-                                    )
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        "Recargar señal",
-                                        color = Color.White,
-                                        fontSize = 13.sp
-                                    )
-                                },
-                                onClick = {
-                                    playerManager.retryPlayback()
-                                    showExtraMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Refresh,
-                                        contentDescription = null,
-                                        tint = Color(0xFF00E5FF)
-                                    )
-                                }
+                            Icon(
+                                imageVector = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                                contentDescription = if (isFullscreen) "Salir de pantalla completa" else "Pantalla completa",
+                                tint = Color(0xFF00E5FF),
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }
