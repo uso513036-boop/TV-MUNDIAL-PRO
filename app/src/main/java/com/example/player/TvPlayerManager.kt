@@ -9,6 +9,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -30,8 +31,9 @@ data class VideoPlaybackState(
 )
 
 @OptIn(UnstableApi::class)
-class TvPlayerManager(private val context: Context) {
+class TvPlayerManager(context: Context) {
 
+    private val appContext = context.applicationContext
     private var exoPlayer: ExoPlayer? = null
     private var currentChannel: Channel? = null
     private var currentStreamIndex = 0
@@ -41,6 +43,10 @@ class TvPlayerManager(private val context: Context) {
 
     fun getPlayer(): ExoPlayer {
         if (exoPlayer == null) {
+            val renderersFactory = DefaultRenderersFactory(appContext)
+                .setEnableDecoderFallback(true)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
+
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
                     15000, // minBufferMs: safe buffer for smooth live stream playback
@@ -58,7 +64,7 @@ class TvPlayerManager(private val context: Context) {
 
             val mediaSourceFactory = DefaultMediaSourceFactory(httpDataSourceFactory)
 
-            exoPlayer = ExoPlayer.Builder(context)
+            exoPlayer = ExoPlayer.Builder(appContext, renderersFactory)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .setLoadControl(loadControl)
                 .build()

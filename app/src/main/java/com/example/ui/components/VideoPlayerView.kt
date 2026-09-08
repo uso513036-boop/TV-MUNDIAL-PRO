@@ -6,9 +6,10 @@ import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,13 +24,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.VolumeMute
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
@@ -53,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,6 +69,7 @@ import com.example.model.Channel
 import com.example.player.TvPlayerManager
 import com.example.player.VideoPlaybackState
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -81,10 +85,10 @@ fun VideoPlayerView(
 ) {
     var showControls by remember { mutableStateOf(true) }
 
-    // Auto-hide controls after 4 seconds when playing
-    LaunchedEffect(showControls, playbackState.isPlaying) {
-        if (showControls && playbackState.isPlaying && !playbackState.isBuffering) {
-            delay(4000)
+    // Ocultar controles automáticamente tras 3.5 segundos de inactividad
+    LaunchedEffect(showControls, channel.id) {
+        if (showControls) {
+            delay(3500)
             showControls = false
         }
     }
@@ -92,11 +96,43 @@ fun VideoPlayerView(
     Box(
         modifier = modifier
             .background(Color.Black)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                showControls = !showControls
+            .pointerInput(channel.id) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    var totalDragY = 0f
+                    var hasDragged = false
+                    val pointerId = down.id
+
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val dragChange = event.changes.firstOrNull { it.id == pointerId }
+                        if (dragChange == null || !dragChange.pressed) {
+                            val wasConsumedByChild = dragChange?.isConsumed ?: false
+                            if (hasDragged) {
+                                if (totalDragY < -40f) {
+                                    // Deslizar hacia arriba -> Canal siguiente
+                                    onNextChannel()
+                                    showControls = true
+                                } else if (totalDragY > 40f) {
+                                    // Deslizar hacia abajo -> Canal anterior
+                                    onPreviousChannel()
+                                    showControls = true
+                                }
+                            } else if (!wasConsumedByChild) {
+                                // Tocar la pantalla -> Mostrar / ocultar controles
+                                showControls = !showControls
+                            }
+                            break
+                        } else {
+                            val delta = dragChange.position.y - dragChange.previousPosition.y
+                            totalDragY += delta
+                            if (abs(totalDragY) > 25f) {
+                                hasDragged = true
+                                dragChange.consume()
+                            }
+                        }
+                    }
+                }
             }
             .testTag("video_player_container")
     ) {
@@ -272,21 +308,82 @@ fun VideoPlayerView(
                     }
                 }
 
-                // Center: Main Play/Pause Button ONLY
-                IconButton(
-                    onClick = { playerManager.togglePlayPause() },
+                // Left: Previous Channel Arrow Button (desaparece a los pocos segundos con los controles)
+                Surface(
+                    onClick = {
+                        onPreviousChannel()
+                        showControls = true
+                    },
+                    shape = CircleShape,
+                    color = Color.Black.copy(alpha = 0.65f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.35f)),
                     modifier = Modifier
-                        .size(56.dp)
-                        .align(Alignment.Center)
-                        .background(Color(0xFF00E5FF), CircleShape)
-                        .testTag("play_pause_button")
+                        .align(Alignment.CenterStart)
+                        .padding(start = if (isFullscreen) 24.dp else 10.dp)
+                        .size(48.dp)
+                        .testTag("player_prev_channel_button")
                 ) {
-                    Icon(
-                        imageVector = if (playbackState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (playbackState.isPlaying) "Pausar" else "Reproducir",
-                        tint = Color(0xFF0F172A),
-                        modifier = Modifier.size(32.dp)
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronLeft,
+                            contentDescription = "Canal anterior",
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+
+                // Right: Next Channel Arrow Button (desaparece a los pocos segundos con los controles)
+                Surface(
+                    onClick = {
+                        onNextChannel()
+                        showControls = true
+                    },
+                    shape = CircleShape,
+                    color = Color.Black.copy(alpha = 0.65f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.35f)),
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = if (isFullscreen) 24.dp else 10.dp)
+                        .size(48.dp)
+                        .testTag("player_next_channel_button")
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Canal siguiente",
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+
+                // Bottom: Floating indicator with gesture hint (helpful and unobtrusive)
+                Surface(
+                    color = Color.Black.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = if (isFullscreen) 16.dp else 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SwapVert,
+                            contentDescription = null,
+                            tint = Color(0xFF00E5FF),
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            text = "Desliza ↑ ↓ para cambiar de canal",
+                            color = Color.White.copy(alpha = 0.9f),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
         }

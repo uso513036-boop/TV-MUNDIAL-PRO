@@ -438,7 +438,10 @@ fun TvMundialApp(
                     ChannelListView(
                         channels = uiState.filteredChannels,
                         selectedChannel = uiState.selectedChannel,
-                        onSelectChannel = { viewModel.selectChannel(it) },
+                        onSelectChannel = {
+                            viewModel.selectChannel(it)
+                            playerManager.playChannel(it)
+                        },
                         onToggleFavorite = { viewModel.toggleFavorite(it) },
                         selectedCategory = uiState.selectedCategory,
                         onSelectCategory = { viewModel.setCategoryFilter(it) },
@@ -478,6 +481,7 @@ fun TvMundialApp(
                         selectedChannel = uiState.selectedChannel,
                         onSelectChannel = {
                             viewModel.selectChannel(it)
+                            playerManager.playChannel(it)
                             viewModel.setActiveTab(AppTab.EN_VIVO)
                         },
                         onToggleFavorite = { viewModel.toggleFavorite(it) },
