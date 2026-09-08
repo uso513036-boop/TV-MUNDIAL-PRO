@@ -131,123 +131,110 @@ fun ChannelListView(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                    .padding(horizontal = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 items(channels, key = { it.id }) { channel ->
                     val isCurrent = selectedChannel?.id == channel.id
 
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = if (isCurrent) Color(0xFF1E293B) else Color(0xFF0F172A)
+                            containerColor = if (isCurrent) Color(0xFF1E293B) else Color(0xFF0D1527)
                         ),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(6.dp),
                         modifier = Modifier
                             .fillMaxWidth()
+                            .height(44.dp)
                             .clickable { onSelectChannel(channel) }
                             .border(
-                                width = if (isCurrent) 1.5.dp else 0.5.dp,
-                                color = if (isCurrent) Color(0xFF00E5FF) else Color(0xFF1E293B),
-                                shape = RoundedCornerShape(8.dp)
+                                width = if (isCurrent) 1.dp else 0.5.dp,
+                                color = if (isCurrent) Color(0xFF00E5FF) else Color(0xFF1B283F),
+                                shape = RoundedCornerShape(6.dp)
                             )
                             .testTag("channel_item_${channel.id}")
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Logo + Short Name + Category (Single-line, not cramped)
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
+                            // 1. Logo (Compact badge)
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = Color(channel.brandColorHex),
+                                modifier = Modifier.size(28.dp)
                             ) {
-                                // Channel Logo
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = Color(channel.brandColorHex),
-                                    modifier = Modifier.size(34.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Text(
-                                            text = channel.logoText,
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Black,
-                                            fontSize = 11.sp
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.width(10.dp))
-
-                                // Flag + Short Name + Category in single row
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.weight(1f)
-                                ) {
+                                Box(contentAlignment = Alignment.Center) {
                                     Text(
-                                        text = channel.country.flag,
-                                        fontSize = 13.sp
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = channel.name,
-                                        color = if (isCurrent) Color(0xFF00E5FF) else Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "• ${channel.category.displayName}",
-                                        color = Color(0xFF94A3B8),
-                                        fontSize = 11.sp,
+                                        text = channel.logoText,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 10.sp,
                                         maxLines = 1
                                     )
                                 }
                             }
 
-                            // Favorite toggle + Play status indicator
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                IconButton(
-                                    onClick = { onToggleFavorite(channel) },
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = if (channel.isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                                        contentDescription = "Favorito",
-                                        tint = if (channel.isFavorite) Color(0xFFFFB300) else Color(0xFF64748B),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
+                            Spacer(modifier = Modifier.width(8.dp))
 
+                            // 2. Short Name (Single-line, prioritized)
+                            Text(
+                                text = channel.displayShortName,
+                                color = if (isCurrent) Color(0xFF00E5FF) else Color.White,
+                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 13.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            Spacer(modifier = Modifier.width(6.dp))
+
+                            // 3. Category badge (Compact, single-line)
+                            Surface(
+                                color = if (isCurrent) Color(0x2900E5FF) else Color(0xFF1A2333),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = channel.category.displayName,
+                                    color = if (isCurrent) Color(0xFF00E5FF) else Color(0xFF8899AC),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(4.dp))
+
+                            // 4. Quick Favorite action
+                            IconButton(
+                                onClick = { onToggleFavorite(channel) },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (channel.isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                                    contentDescription = "Favorito",
+                                    tint = if (channel.isFavorite) Color(0xFFFFB300) else Color(0xFF4A5D78),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+
+                            // 5. Playing indicator
+                            if (isCurrent) {
                                 Surface(
-                                    color = if (isCurrent) Color(0xFF00E5FF) else Color(0xFF1E293B),
+                                    color = Color(0xFF00E5FF),
                                     shape = CircleShape,
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Default.PlayArrow,
-                                            contentDescription = "Reproducir canal",
-                                            tint = if (isCurrent) Color(0xFF0F172A) else Color.White,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
+                                    modifier = Modifier.size(6.dp)
+                                ) {}
                             }
                         }
                     }
                 }
 
                 item {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }

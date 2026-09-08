@@ -67,6 +67,7 @@ data class Channel(
     val id: String,
     val number: Int,
     val name: String,
+    val shortName: String = "",
     val country: Country,
     val category: TvCategory,
     val streamUrl: String,
@@ -78,6 +79,16 @@ data class Channel(
     val schedule: List<ProgramItem>,
     val isFavorite: Boolean = false
 ) {
+    val displayShortName: String
+        get() = if (shortName.isNotBlank()) shortName else {
+            name.replace(" Costa Rica", "")
+                .replace(" Televisión", "")
+                .replace(" Señal Nacional", "")
+                .replace(" Perú", "")
+                .replace(" Peru", "")
+                .trim()
+        }
+
     fun getCurrentProgram(currentMinutes: Int): ProgramItem? {
         return schedule.find { it.isCurrentlyAiring(currentMinutes) } ?: schedule.firstOrNull()
     }

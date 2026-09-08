@@ -96,9 +96,7 @@ object ChannelRepository {
                 country = Country.PERU,
                 category = TvCategory.CULTURA,
                 streamUrl = "https://streamusmptv.ddns.net/live/stream.m3u8",
-                backupStreamUrls = listOf(
-                    "http://bantel-cdn1.iptvperu.tv:1935/btnscrtn/tvperu.stream/playlist.m3u8"
-                ),
+                backupStreamUrls = emptyList(),
                 logoText = "USMP",
                 brandColorHex = 0xFF2E7D32,
                 description = "El primer canal educativo del Perú con clases y lecciones interactivas para primaria y secundaria.",
@@ -121,8 +119,7 @@ object ChannelRepository {
                 category = TvCategory.NOTICIAS,
                 streamUrl = "https://live-evg11.tv360.bitel.com.pe/bitel/pbo_abr/playlist.m3u8",
                 backupStreamUrls = listOf(
-                    "http://190.93.224.42/PBO/index.m3u8",
-                    "http://bantel-cdn1.iptvperu.tv:1935/btnscrtn/tvperunoticias.stream/playlist.m3u8"
+                    "http://190.93.224.42/PBO/index.m3u8"
                 ),
                 logoText = "PBO",
                 brandColorHex = 0xFF00838F,
@@ -143,9 +140,7 @@ object ChannelRepository {
                 country = Country.PERU,
                 category = TvCategory.NOTICIAS,
                 streamUrl = "https://5790d294af2dc.streamlock.net:443/streamtv/streamtv/playlist.m3u8",
-                backupStreamUrls = listOf(
-                    "https://live-evg7.tv360.bitel.com.pe/bitel/piuratvSRT/playlist.m3u8"
-                ),
+                backupStreamUrls = emptyList(),
                 logoText = "SOL",
                 brandColorHex = 0xFFFF8F00,
                 description = "La señal televisiva del norte peruano con cobertura en Trujillo, Chiclayo, Piura y Chimbote.",
@@ -166,8 +161,7 @@ object ChannelRepository {
                 category = TvCategory.ENTRETENIMIENTO,
                 streamUrl = "https://stream2.trivutv.com/memfs/1bc8358a-665e-4bc1-a580-e4fcb54b5103.m3u8",
                 backupStreamUrls = listOf(
-                    "http://190.93.224.42/TRIVU-TV/index.m3u8",
-                    "http://bantel-cdn1.iptvperu.tv:1935/btnscrtn/tvperu.stream/playlist.m3u8"
+                    "http://190.93.224.42/TRIVU-TV/index.m3u8"
                 ),
                 logoText = "TRV",
                 brandColorHex = 0xFF7C4DFF,
@@ -191,10 +185,7 @@ object ChannelRepository {
                 country = Country.COSTA_RICA,
                 category = TvCategory.NOTICIAS,
                 streamUrl = "https://mdstrm.com/live-stream-playlist/5a7b1e63a8da282c34d65445.m3u8",
-                backupStreamUrls = listOf(
-                    "https://d2n1wzrr0aogf5.cloudfront.net/ts:abr.m3u8",
-                    "https://59ef525c24caa.streamlock.net/vmtv/vmlatino/playlist.m3u8"
-                ),
+                backupStreamUrls = emptyList(),
                 logoText = "C8",
                 brandColorHex = 0xFFD81B60,
                 description = "Canal 8 de Costa Rica con noticias de última hora, entretenimiento, fútbol de primera división y programas de opinión.",
@@ -217,10 +208,7 @@ object ChannelRepository {
                 country = Country.COSTA_RICA,
                 category = TvCategory.NOTICIAS,
                 streamUrl = "https://d2n1wzrr0aogf5.cloudfront.net/ts:abr.m3u8",
-                backupStreamUrls = listOf(
-                    "https://mdstrm.com/live-stream-playlist/5a7b1e63a8da282c34d65445.m3u8",
-                    "https://59ef525c24caa.streamlock.net/vmtv/vmlatino/playlist.m3u8"
-                ),
+                backupStreamUrls = emptyList(),
                 logoText = "X42",
                 brandColorHex = 0xFFFF5722,
                 description = "El canal del pueblo costarricense. Sucesos en vivo, denuncias ciudadanas, periodismo de impacto y voz comunitaria.",
@@ -242,10 +230,7 @@ object ChannelRepository {
                 country = Country.COSTA_RICA,
                 category = TvCategory.MUSICA,
                 streamUrl = "https://59ef525c24caa.streamlock.net/vmtv/vmlatino/playlist.m3u8",
-                backupStreamUrls = listOf(
-                    "https://mdstrm.com/live-stream-playlist/5a7b1e63a8da282c34d65445.m3u8",
-                    "https://d2n1wzrr0aogf5.cloudfront.net/ts:abr.m3u8"
-                ),
+                backupStreamUrls = emptyList(),
                 logoText = "VM",
                 brandColorHex = 0xFF7B1FA2,
                 description = "El canal de la música y la juventud de Costa Rica. Conciertos, estrenos mundiales, reggaeton, pop, rock y festivales.",
@@ -266,10 +251,9 @@ object ChannelRepository {
                 name = "Canal 1 Costa Rica",
                 country = Country.COSTA_RICA,
                 category = TvCategory.ENTRETENIMIENTO,
-                streamUrl = "https://vid.canal1cr.com:3424/multi_live/play_720.m3u8",
+                streamUrl = "https://vid.canal1cr.com:3424/multi_live/play.m3u8",
                 backupStreamUrls = listOf(
-                    "https://mdstrm.com/live-stream-playlist/5a7b1e63a8da282c34d65445.m3u8",
-                    "https://d2n1wzrr0aogf5.cloudfront.net/ts:abr.m3u8"
+                    "https://vid.canal1cr.com:3424/multi_live/play_720.m3u8"
                 ),
                 logoText = "C1",
                 brandColorHex = 0xFF0D47A1,
@@ -288,10 +272,10 @@ object ChannelRepository {
                 name = "TV Sur Canal 14",
                 country = Country.COSTA_RICA,
                 category = TvCategory.CULTURA,
-                streamUrl = "https://k20.usastreams.com:8081/tvsur/index.m3u8",
+                streamUrl = "http://tv.ticosmedia.com:1935/TVSUR/TVSUR/playlist.m3u8",
                 backupStreamUrls = listOf(
-                    "https://mdstrm.com/live-stream-playlist/5a7b1e63a8da282c34d65445.m3u8",
-                    "https://59ef525c24caa.streamlock.net/vmtv/vmlatino/playlist.m3u8"
+                    "https://k20.usastreams.com:8081/tvsur/tracks-v1a1/mono.ts.m3u8",
+                    "http://tvn.obix.tv:1935/TVN/CH14.stream_720p/playlist.m3u8"
                 ),
                 logoText = "S14",
                 brandColorHex = 0xFF0097A7,
@@ -311,9 +295,7 @@ object ChannelRepository {
                 country = Country.COSTA_RICA,
                 category = TvCategory.CULTURA,
                 streamUrl = "https://5fc584f3f19c9.streamlock.net/agrotendencia/videoagrotendencia_hls1/playlist.m3u8",
-                backupStreamUrls = listOf(
-                    "https://mdstrm.com/live-stream-playlist/5a7b1e63a8da282c34d65445.m3u8"
-                ),
+                backupStreamUrls = emptyList(),
                 logoText = "AGRO",
                 brandColorHex = 0xFF388E3C,
                 description = "Canal agropecuario con cobertura de tecnología agrícola, ganadería y ecología de Centroamérica.",
