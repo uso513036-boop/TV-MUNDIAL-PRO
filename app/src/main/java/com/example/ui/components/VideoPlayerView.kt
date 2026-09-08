@@ -23,24 +23,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.VolumeMute
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,7 +53,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -81,6 +79,7 @@ fun VideoPlayerView(
     modifier: Modifier = Modifier
 ) {
     var showControls by remember { mutableStateOf(true) }
+    var showExtraMenu by remember { mutableStateOf(false) }
 
     // Auto-hide controls after 4 seconds when playing
     LaunchedEffect(showControls, playbackState.isPlaying) {
@@ -109,7 +108,7 @@ fun VideoPlayerView(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
-                    useController = false // Custom Compose overlay controls
+                    useController = false // Custom simplified Compose controls
                     player = playerManager.getPlayer()
                 }
             },
@@ -128,29 +127,11 @@ fun VideoPlayerView(
                     .background(Color.Black.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    CircularProgressIndicator(
-                        color = Color(0xFF00E5FF),
-                        strokeWidth = 3.dp,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = if (playbackState.isUsingBackup) "Cargando servidor de respaldo..." else "Conectando señal en vivo...",
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = "${channel.country.flag} ${channel.name}",
-                        color = Color(0xFF94A3B8),
-                        fontSize = 12.sp
-                    )
-                }
+                CircularProgressIndicator(
+                    color = Color(0xFF00E5FF),
+                    strokeWidth = 3.dp,
+                    modifier = Modifier.size(42.dp)
+                )
             }
         }
 
@@ -165,29 +146,15 @@ fun VideoPlayerView(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(24.dp)
+                    modifier = Modifier.padding(20.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Warning,
                         contentDescription = "Error de señal",
                         tint = Color(0xFFFFB300),
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(36.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Transmisión en reconexión",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = playbackState.errorMessage ?: "El servidor está ocupado. Pulsa reintentar.",
-                        color = Color(0xFFCBD5E1),
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
                     Button(
                         onClick = { playerManager.retryPlayback() },
                         colors = ButtonDefaults.buttonColors(
@@ -203,13 +170,13 @@ fun VideoPlayerView(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Reintentar transmisión", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Reintentar señal", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }
         }
 
-        // Custom Overlay Controls (Fades in/out)
+        // Simplified Controls Overlay: Title + Main Play Button + EN VIVO
         AnimatedVisibility(
             visible = showControls,
             enter = fadeIn(),
@@ -222,14 +189,14 @@ fun VideoPlayerView(
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                Color.Black.copy(alpha = 0.8f),
+                                Color.Black.copy(alpha = 0.7f),
                                 Color.Transparent,
-                                Color.Black.copy(alpha = 0.85f)
+                                Color.Black.copy(alpha = 0.7f)
                             )
                         )
                     )
             ) {
-                // Top Bar
+                // Top: Channel Title (left) & EN VIVO badge + secondary menu (right)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -238,56 +205,25 @@ fun VideoPlayerView(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    // Only channel title
+                    Text(
+                        text = channel.name,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f, fill = false)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        // Channel Logo Pill
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color(channel.brandColorHex),
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = channel.logoText,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 11.sp
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = channel.country.flag,
-                                    fontSize = 14.sp
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = channel.name,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            Text(
-                                text = "${channel.category.displayName} • ${channel.broadcastQuality}",
-                                color = Color(0xFF94A3B8),
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Live badge
+                        // EN VIVO badge
                         Surface(
                             color = Color(0xFFFF1744),
-                            shape = RoundedCornerShape(4.dp),
-                            modifier = Modifier.padding(end = 6.dp)
+                            shape = RoundedCornerShape(4.dp)
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
@@ -310,159 +246,107 @@ fun VideoPlayerView(
                             }
                         }
 
-                        // Reload stream
-                        IconButton(
-                            onClick = { playerManager.retryPlayback() },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .testTag("reload_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Recargar señal",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
+                        // Secondary actions grouped in a clean overflow menu
+                        Box {
+                            IconButton(
+                                onClick = { showExtraMenu = true },
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .testTag("player_more_options")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "Opciones",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showExtraMenu,
+                                onDismissRequest = { showExtraMenu = false },
+                                modifier = Modifier.background(Color(0xFF1E293B))
+                            ) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            if (playbackState.isMuted) "Activar sonido" else "Silenciar",
+                                            color = Color.White,
+                                            fontSize = 13.sp
+                                        )
+                                    },
+                                    onClick = {
+                                        playerManager.toggleMute()
+                                        showExtraMenu = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = if (playbackState.isMuted) Icons.Default.VolumeMute else Icons.Default.VolumeUp,
+                                            contentDescription = null,
+                                            tint = Color(0xFF00E5FF)
+                                        )
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            if (isFullscreen) "Salir pantalla completa" else "Pantalla completa",
+                                            color = Color.White,
+                                            fontSize = 13.sp
+                                        )
+                                    },
+                                    onClick = {
+                                        onToggleFullscreen()
+                                        showExtraMenu = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                                            contentDescription = null,
+                                            tint = Color(0xFF00E5FF)
+                                        )
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            "Recargar señal",
+                                            color = Color.White,
+                                            fontSize = 13.sp
+                                        )
+                                    },
+                                    onClick = {
+                                        playerManager.retryPlayback()
+                                        showExtraMenu = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Refresh,
+                                            contentDescription = null,
+                                            tint = Color(0xFF00E5FF)
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
                 }
 
-                // Center Play/Pause & Zap Controls
-                Row(
+                // Center: Main Play/Pause Button ONLY
+                IconButton(
+                    onClick = { playerManager.togglePlayPause() },
                     modifier = Modifier
+                        .size(56.dp)
                         .align(Alignment.Center)
-                        .padding(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(28.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .background(Color(0xFF00E5FF), CircleShape)
+                        .testTag("play_pause_button")
                 ) {
-                    // Previous Channel
-                    IconButton(
-                        onClick = onPreviousChannel,
-                        modifier = Modifier
-                            .size(44.dp)
-                            .background(Color.Black.copy(alpha = 0.5f), CircleShape)
-                            .testTag("prev_channel_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SkipPrevious,
-                            contentDescription = "Canal anterior",
-                            tint = Color.White,
-                            modifier = Modifier.size(26.dp)
-                        )
-                    }
-
-                    // Play/Pause
-                    IconButton(
-                        onClick = { playerManager.togglePlayPause() },
-                        modifier = Modifier
-                            .size(56.dp)
-                            .background(Color(0xFF00E5FF), CircleShape)
-                            .testTag("play_pause_button")
-                    ) {
-                        Icon(
-                            imageVector = if (playbackState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (playbackState.isPlaying) "Pausar" else "Reproducir",
-                            tint = Color(0xFF0F172A),
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-
-                    // Next Channel
-                    IconButton(
-                        onClick = onNextChannel,
-                        modifier = Modifier
-                            .size(44.dp)
-                            .background(Color.Black.copy(alpha = 0.5f), CircleShape)
-                            .testTag("next_channel_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SkipNext,
-                            contentDescription = "Canal siguiente",
-                            tint = Color.White,
-                            modifier = Modifier.size(26.dp)
-                        )
-                    }
-                }
-
-                // Bottom Bar Controls
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    // Current Program preview
-                    val currentProg = channel.schedule.firstOrNull()
-                    Column(modifier = Modifier.weight(1f, fill = false)) {
-                        Text(
-                            text = currentProg?.title ?: "Transmisión en vivo",
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 12.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (currentProg != null) {
-                            Text(
-                                text = "${currentProg.startTime} - ${currentProg.endTime}",
-                                color = Color(0xFF94A3B8),
-                                fontSize = 10.sp
-                            )
-                        }
-                    }
-
-                    // Actions: Mute, Aspect Ratio, Fullscreen
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        // Mute button
-                        IconButton(
-                            onClick = { playerManager.toggleMute() },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .testTag("mute_button")
-                        ) {
-                            Icon(
-                                imageVector = if (playbackState.isMuted) Icons.Default.VolumeMute else Icons.Default.VolumeUp,
-                                contentDescription = if (playbackState.isMuted) "Activar sonido" else "Silenciar",
-                                tint = if (playbackState.isMuted) Color(0xFFFFB300) else Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        // Aspect ratio mode
-                        IconButton(
-                            onClick = { playerManager.cycleResizeMode() },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .testTag("aspect_ratio_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AspectRatio,
-                                contentDescription = "Cambiar formato de pantalla",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        // Fullscreen button
-                        IconButton(
-                            onClick = onToggleFullscreen,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .testTag("fullscreen_button")
-                        ) {
-                            Icon(
-                                imageVector = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                                contentDescription = if (isFullscreen) "Salir de pantalla completa" else "Pantalla completa",
-                                tint = Color(0xFF00E5FF),
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
+                    Icon(
+                        imageVector = if (playbackState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (playbackState.isPlaying) "Pausar" else "Reproducir",
+                        tint = Color(0xFF0F172A),
+                        modifier = Modifier.size(32.dp)
+                    )
                 }
             }
         }

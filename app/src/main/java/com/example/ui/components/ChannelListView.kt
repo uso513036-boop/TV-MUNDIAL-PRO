@@ -131,137 +131,113 @@ fun ChannelListView(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(horizontal = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 items(channels, key = { it.id }) { channel ->
                     val isCurrent = selectedChannel?.id == channel.id
-                    val currentProg = channel.getCurrentProgram(currentMinutes)
 
                     Card(
                         colors = CardDefaults.cardColors(
                             containerColor = if (isCurrent) Color(0xFF1E293B) else Color(0xFF0F172A)
                         ),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(8.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onSelectChannel(channel) }
                             .border(
                                 width = if (isCurrent) 1.5.dp else 0.5.dp,
                                 color = if (isCurrent) Color(0xFF00E5FF) else Color(0xFF1E293B),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(8.dp)
                             )
                             .testTag("channel_item_${channel.id}")
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
+                            // Logo + Short Name + Category (Single-line, not cramped)
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.weight(1f)
                             ) {
-                                // Channel Logo Box
+                                // Channel Logo
                                 Surface(
-                                    shape = RoundedCornerShape(10.dp),
+                                    shape = RoundedCornerShape(6.dp),
                                     color = Color(channel.brandColorHex),
-                                    modifier = Modifier.size(44.dp)
+                                    modifier = Modifier.size(34.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Text(
                                             text = channel.logoText,
                                             color = Color.White,
                                             fontWeight = FontWeight.Black,
-                                            fontSize = 14.sp
+                                            fontSize = 11.sp
                                         )
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.width(12.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
 
-                                Column {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = channel.country.flag,
-                                            fontSize = 14.sp
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = channel.name,
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        if (isCurrent) {
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Surface(
-                                                color = Color(0xFFFF1744),
-                                                shape = RoundedCornerShape(3.dp)
-                                            ) {
-                                                Text(
-                                                    text = "EN PANTALLA",
-                                                    color = Color.White,
-                                                    fontSize = 8.sp,
-                                                    fontWeight = FontWeight.Black,
-                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.height(2.dp))
-
-                                    // Current show
+                                // Flag + Short Name + Category in single row
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
                                     Text(
-                                        text = currentProg?.let { "▶ ${it.title}" } ?: "Emisión continua en vivo",
-                                        color = if (isCurrent) Color(0xFF00E5FF) else Color(0xFFCBD5E1),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium,
+                                        text = channel.country.flag,
+                                        fontSize = 13.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = channel.name,
+                                        color = if (isCurrent) Color(0xFF00E5FF) else Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-
-                                    Spacer(modifier = Modifier.height(2.dp))
-
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "${channel.category.displayName} • ${channel.broadcastQuality} • ${channel.country.displayName}",
-                                        color = Color(0xFF64748B),
-                                        fontSize = 10.sp
+                                        text = "• ${channel.category.displayName}",
+                                        color = Color(0xFF94A3B8),
+                                        fontSize = 11.sp,
+                                        maxLines = 1
                                     )
                                 }
                             }
 
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                // Favorite button
+                            // Favorite toggle + Play status indicator
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
                                 IconButton(
                                     onClick = { onToggleFavorite(channel) },
-                                    modifier = Modifier.size(36.dp)
+                                    modifier = Modifier.size(32.dp)
                                 ) {
                                     Icon(
                                         imageVector = if (channel.isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,
                                         contentDescription = "Favorito",
                                         tint = if (channel.isFavorite) Color(0xFFFFB300) else Color(0xFF64748B),
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
 
-                                // Play Indicator
                                 Surface(
                                     color = if (isCurrent) Color(0xFF00E5FF) else Color(0xFF1E293B),
                                     shape = CircleShape,
-                                    modifier = Modifier.size(34.dp)
+                                    modifier = Modifier.size(28.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             imageVector = Icons.Default.PlayArrow,
                                             contentDescription = "Reproducir canal",
                                             tint = if (isCurrent) Color(0xFF0F172A) else Color.White,
-                                            modifier = Modifier.size(20.dp)
+                                            modifier = Modifier.size(16.dp)
                                         )
                                     }
                                 }
@@ -271,7 +247,7 @@ fun ChannelListView(
                 }
 
                 item {
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
             }
         }

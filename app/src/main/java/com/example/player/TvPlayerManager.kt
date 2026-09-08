@@ -3,11 +3,15 @@ package com.example.player
 import android.content.Context
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.example.model.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,7 +50,16 @@ class TvPlayerManager(private val context: Context) {
                 )
                 .build()
 
+            val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+                .setUserAgent("Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                .setConnectTimeoutMs(10000)
+                .setReadTimeoutMs(15000)
+                .setAllowCrossProtocolRedirects(true)
+
+            val mediaSourceFactory = DefaultMediaSourceFactory(httpDataSourceFactory)
+
             exoPlayer = ExoPlayer.Builder(context)
+                .setMediaSourceFactory(mediaSourceFactory)
                 .setLoadControl(loadControl)
                 .build()
                 .apply {
@@ -94,9 +107,11 @@ class TvPlayerManager(private val context: Context) {
         )
 
         try {
-            val mediaItem = MediaItem.Builder()
-                .setUri(url)
-                .build()
+            val mediaItemBuilder = MediaItem.Builder().setUri(url)
+            if (url.contains(".m3u8", ignoreCase = true)) {
+                mediaItemBuilder.setMimeType(MimeTypes.APPLICATION_M3U8)
+            }
+            val mediaItem = mediaItemBuilder.build()
             player.setMediaItem(mediaItem)
             player.prepare()
             player.play()

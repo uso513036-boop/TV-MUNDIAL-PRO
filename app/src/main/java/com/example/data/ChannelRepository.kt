@@ -18,11 +18,11 @@ object ChannelRepository {
                 name = "TV Perú (Canal 7)",
                 country = Country.PERU,
                 category = TvCategory.CULTURA,
-                // TV Perú official / public live stream
-                streamUrl = "https://cdnhd.iblups.com/hls/tvperuhd.m3u8",
+                // Highly stable verified HLS streams
+                streamUrl = "http://bantel-cdn1.iptvperu.tv:1935/btnscrtn/tvperu.stream/playlist.m3u8",
                 backupStreamUrls = listOf(
-                    "https://live-edge01.telecentro.net.ar/live/smil:tvp.smil/playlist.m3u8",
-                    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                    "http://190.93.224.42/TV-PERU/index.m3u8",
+                    "https://live-evg11.tv360.bitel.com.pe/bitel/telelimaSRT/playlist.m3u8"
                 ),
                 logoText = "TVP",
                 brandColorHex = 0xFFE53935,
@@ -46,10 +46,10 @@ object ChannelRepository {
                 name = "TV Perú Noticias 7.3",
                 country = Country.PERU,
                 category = TvCategory.NOTICIAS,
-                streamUrl = "https://tvperunoticias.akamaized.net/hls/live/2034907/tvperunoticias/master.m3u8",
+                streamUrl = "http://bantel-cdn1.iptvperu.tv:1935/btnscrtn/tvperunoticias.stream/playlist.m3u8",
                 backupStreamUrls = listOf(
-                    "https://cdnhd.iblups.com/hls/tvperuhd.m3u8",
-                    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"
+                    "http://190.93.224.42/TV-PERU-NOTICIAS/index.m3u8",
+                    "http://bantel-cdn1.iptvperu.tv:1935/btnscrtn/tvperu.stream/playlist.m3u8"
                 ),
                 logoText = "7.3",
                 brandColorHex = 0xFFB71C1C,
@@ -66,52 +66,27 @@ object ChannelRepository {
                 )
             ),
             Channel(
-                id = "pe_canal_ipe",
-                number = 74,
-                name = "Canal IPe (Perú)",
-                country = Country.PERU,
-                category = TvCategory.INFANTIL,
-                streamUrl = "https://canalipe.akamaized.net/hls/live/2034908/canalipe/master.m3u8",
-                backupStreamUrls = listOf(
-                    "https://cdnhd.iblups.com/hls/tvperuhd.m3u8",
-                    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
-                ),
-                logoText = "IPe",
-                brandColorHex = 0xFFFF6D00,
-                description = "El canal cultural y entretenido de la infancia y juventud del Perú. Creatividad, ciencia y diversión.",
-                broadcastQuality = "HD 1080p",
-                schedule = listOf(
-                    ProgramItem("pe_ipe_1", "Chicos IPe Despierta", "Aventuras animadas y canciones para los más pequeños.", TvCategory.INFANTIL, "06:00", "09:00", 360, 540, "TP"),
-                    ProgramItem("pe_ipe_2", "Ciencia en Acción Perú", "Experimentos sencillos, robótica escolar y descubrimientos científicos.", TvCategory.CULTURA, "09:00", "11:30", 540, 690, "TP"),
-                    ProgramItem("pe_ipe_3", "Mundo de Monstruos Andinos", "Serie de animación que rescata los mitos y leyendas de la cosmovisión andina.", TvCategory.INFANTIL, "11:30", "13:30", 690, 810, "TP"),
-                    ProgramItem("pe_ipe_4", "Hazlo en Casa: Arte y Diseño", "Talleres creativos de dibujo, reciclaje y modelado.", TvCategory.INFANTIL, "13:30", "16:00", 810, 960, "TP"),
-                    ProgramItem("pe_ipe_5", "Zona Gamer & Tech", "Novedades de videojuegos peruanos, tecnología y cultura pop.", TvCategory.ENTRETENIMIENTO, "16:00", "18:30", 960, 1110, "TP"),
-                    ProgramItem("pe_ipe_6", "Documentales Jóvenes del Perú", "Historias de innovación social y superación en comunidades de todo el país.", TvCategory.CULTURA, "18:30", "21:00", 1110, 1260, "TP"),
-                    ProgramItem("pe_ipe_7", "Cine Corto IPe", "Selección de cortometrajes independientes de realizadores universitarios peruanos.", TvCategory.CULTURA, "21:00", "24:00", 1260, 1440, "+14")
-                )
-            ),
-            Channel(
-                id = "pe_congreso_tv",
-                number = 56,
-                name = "Congreso TV Perú",
+                id = "pe_rpp_tv",
+                number = 10,
+                name = "RPP TV Noticias",
                 country = Country.PERU,
                 category = TvCategory.NOTICIAS,
-                streamUrl = "https://live-congreso.smartstream.pe/live/congresotv.m3u8",
+                streamUrl = "https://redirector.rudo.video/hls-video/567ffde3fa319fadf3419efda25619456231dfea/rpptv/rpptv.smil/playlist.m3u8",
                 backupStreamUrls = listOf(
-                    "https://cdnhd.iblups.com/hls/tvperuhd.m3u8",
-                    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+                    "http://190.93.224.42/RPP/index.m3u8",
+                    "http://bantel-cdn1.iptvperu.tv:1935/btnscrtn/RPP/playlist.m3u8"
                 ),
-                logoText = "CTV",
-                brandColorHex = 0xFF1565C0,
-                description = "Transmisión en directo de las sesiones del Pleno del Congreso de la República del Perú y comisiones legislativas.",
+                logoText = "RPP",
+                brandColorHex = 0xFFFFD600,
+                description = "El canal de noticias líder en radio y televisión del Perú con información minuto a minuto.",
                 broadcastQuality = "HD 1080p",
                 schedule = listOf(
-                    ProgramItem("pe_ctv_1", "Agenda Parlamentaria Matutina", "Programación de las sesiones de comisiones del día.", TvCategory.NOTICIAS, "07:00", "09:00", 420, 540, "TP"),
-                    ProgramItem("pe_ctv_2", "Sesión de Comisiones en Vivo", "Debates en la Comisión de Presupuesto y Constitución.", TvCategory.NOTICIAS, "09:00", "13:00", 540, 780, "TP"),
-                    ProgramItem("pe_ctv_3", "Resumen Informativo Legislativo", "Proyectos de ley aprobados y declaraciones de los voceros.", TvCategory.NOTICIAS, "13:00", "14:30", 780, 870, "TP"),
-                    ProgramItem("pe_ctv_4", "Sesión del Pleno del Congreso EN VIVO", "Debate y votación de leyes de trascendencia nacional.", TvCategory.NOTICIAS, "14:30", "19:00", 870, 1140, "TP"),
-                    ProgramItem("pe_ctv_5", "Tribuna Democrática", "Análisis con especialistas sobre el impacto de las normas aprobadas.", TvCategory.NOTICIAS, "19:00", "22:00", 1140, 1320, "+14"),
-                    ProgramItem("pe_ctv_6", "Archivo Histórico del Parlamento", "Documentales sobre presidentes y momentos cumbres de la historia republicana.", TvCategory.CULTURA, "22:00", "24:00", 1320, 1440, "TP")
+                    ProgramItem("pe_rpp_1", "La Rotativa del Aire", "Información del tránsito, sucesos y entrevistas en vivo.", TvCategory.NOTICIAS, "06:00", "09:00", 360, 540, "TP"),
+                    ProgramItem("pe_rpp_2", "Ampliación de Noticias", "La mesa de opinión política más influyente del país.", TvCategory.NOTICIAS, "09:00", "12:00", 540, 720, "+14"),
+                    ProgramItem("pe_rpp_3", "RPP Central Mediodía", "Toda la información de Lima y las regiones del interior.", TvCategory.NOTICIAS, "12:00", "15:00", 720, 900, "TP"),
+                    ProgramItem("pe_rpp_4", "Fútbol como Cancha", "Debate deportivo con los especialistas del balompié peruano.", TvCategory.DEPORTES, "15:00", "18:00", 900, 1080, "TP"),
+                    ProgramItem("pe_rpp_5", "Las Claves del Día", "Análisis con los principales protagonistas de la noticia.", TvCategory.NOTICIAS, "18:00", "21:00", 1080, 1260, "+14"),
+                    ProgramItem("pe_rpp_6", "Cierre de Jornada", "Resumen exhaustivo de los acontecimientos del Perú.", TvCategory.NOTICIAS, "21:00", "24:00", 1260, 1440, "TP")
                 )
             ),
             Channel(
@@ -120,10 +95,9 @@ object ChannelRepository {
                 name = "USMP TV Educativo",
                 country = Country.PERU,
                 category = TvCategory.CULTURA,
-                streamUrl = "https://live.usmptv.pe/hls/usmptv.m3u8",
+                streamUrl = "https://streamusmptv.ddns.net/live/stream.m3u8",
                 backupStreamUrls = listOf(
-                    "https://canalipe.akamaized.net/hls/live/2034908/canalipe/master.m3u8",
-                    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4"
+                    "http://bantel-cdn1.iptvperu.tv:1935/btnscrtn/tvperu.stream/playlist.m3u8"
                 ),
                 logoText = "USMP",
                 brandColorHex = 0xFF2E7D32,
@@ -140,53 +114,70 @@ object ChannelRepository {
                 )
             ),
             Channel(
-                id = "pe_bethel_tv",
-                number = 25,
-                name = "Bethel Televisión Perú",
+                id = "pe_pbo_tv",
+                number = 11,
+                name = "PBO TV Perú",
                 country = Country.PERU,
-                category = TvCategory.ENTRETENIMIENTO,
-                streamUrl = "https://betheltv.streamguys1.com/live/betheltv/playlist.m3u8",
+                category = TvCategory.NOTICIAS,
+                streamUrl = "https://live-evg11.tv360.bitel.com.pe/bitel/pbo_abr/playlist.m3u8",
                 backupStreamUrls = listOf(
-                    "https://cdnhd.iblups.com/hls/tvperuhd.m3u8",
-                    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4"
+                    "http://190.93.224.42/PBO/index.m3u8",
+                    "http://bantel-cdn1.iptvperu.tv:1935/btnscrtn/tvperunoticias.stream/playlist.m3u8"
                 ),
-                logoText = "BTV",
+                logoText = "PBO",
                 brandColorHex = 0xFF00838F,
-                description = "Canal familiar peruano con transmisión mundial, programas de valores, salud, música y orientación comunitaria.",
+                description = "Canal de noticias, política y análisis independiente con cobertura nacional.",
                 broadcastQuality = "FHD 1080p",
                 schedule = listOf(
-                    ProgramItem("pe_btv_1", "Despertar Familiar", "Reflexiones matutinas, consejos de convivencia y salud preventiva.", TvCategory.ENTRETENIMIENTO, "06:00", "08:30", 360, 510, "TP"),
-                    ProgramItem("pe_btv_2", "Mundo Infantil Bethel", "Historias con valores, títeres y canciones para el hogar.", TvCategory.INFANTIL, "08:30", "11:00", 510, 660, "TP"),
-                    ProgramItem("pe_btv_3", "Vida Sana y Nutrición Peruana", "Consejos de especialistas sobre alimentación natural y bienestar.", TvCategory.ENTRETENIMIENTO, "11:00", "13:30", 660, 810, "TP"),
-                    ProgramItem("pe_btv_4", "Encuentro con las Naciones", "Reportajes sobre proyectos humanitarios en los cinco continentes.", TvCategory.CULTURA, "13:30", "16:00", 810, 960, "TP"),
-                    ProgramItem("pe_btv_5", "Música de Paz e Inspiración", "Conciertos corales y melodías acústicas para toda la familia.", TvCategory.MUSICA, "16:00", "18:30", 960, 1110, "TP"),
-                    ProgramItem("pe_btv_6", "Valores para la Sociedad", "Conferencias familiares y debates sobre ética comunitaria.", TvCategory.ENTRETENIMIENTO, "18:30", "21:30", 1110, 1290, "TP"),
-                    ProgramItem("pe_btv_7", "Noche de Esperanza", "Espacio de reflexión nocturna y orientación familiar.", TvCategory.ENTRETENIMIENTO, "21:30", "24:00", 1290, 1440, "TP")
+                    ProgramItem("pe_pbo_1", "PBO Noticias Matinal", "Noticias del día y entrevistas de coyuntura política.", TvCategory.NOTICIAS, "06:00", "09:00", 360, 540, "TP"),
+                    ProgramItem("pe_pbo_2", "Tribuna Abierta", "Panel de discusión y participación de televidentes.", TvCategory.NOTICIAS, "09:00", "12:00", 540, 720, "+14"),
+                    ProgramItem("pe_pbo_3", "PBO Central", "Resumen informativo del mediodía.", TvCategory.NOTICIAS, "12:00", "15:00", 720, 900, "TP"),
+                    ProgramItem("pe_pbo_4", "Análisis con Phillip Butters", "Opinión y debate sobre los sucesos del país.", TvCategory.NOTICIAS, "18:00", "21:00", 1080, 1260, "+18"),
+                    ProgramItem("pe_pbo_5", "Cierre de Noche", "Noticias internacionales y resumen local.", TvCategory.NOTICIAS, "21:00", "24:00", 1260, 1440, "TP")
                 )
             ),
             Channel(
-                id = "pe_nativa_tv",
-                number = 36,
-                name = "Nativa TV Perú",
+                id = "pe_sol_tv",
+                number = 21,
+                name = "Sol TV Norte",
                 country = Country.PERU,
-                category = TvCategory.DEPORTES,
-                streamUrl = "https://edge01.iptv.stream.nativa.pe/live/nativatv.m3u8",
+                category = TvCategory.NOTICIAS,
+                streamUrl = "https://5790d294af2dc.streamlock.net:443/streamtv/streamtv/playlist.m3u8",
                 backupStreamUrls = listOf(
-                    "https://live-edge01.telecentro.net.ar/live/smil:tvp.smil/playlist.m3u8",
-                    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackSeeTheWorld.mp4"
+                    "https://live-evg7.tv360.bitel.com.pe/bitel/piuratvSRT/playlist.m3u8"
                 ),
-                logoText = "NTV",
-                brandColorHex = 0xFF303F9F,
-                description = "La señal multiplataforma del deporte peruano, fútbol femenino, Liga 2, vóley y noticias sin filtro.",
+                logoText = "SOL",
+                brandColorHex = 0xFFFF8F00,
+                description = "La señal televisiva del norte peruano con cobertura en Trujillo, Chiclayo, Piura y Chimbote.",
+                broadcastQuality = "HD 720p",
+                schedule = listOf(
+                    ProgramItem("pe_sol_1", "Sol TV Noticias Matinal", "Información de las provincias del norte del país.", TvCategory.NOTICIAS, "06:00", "09:00", 360, 540, "TP"),
+                    ProgramItem("pe_sol_2", "Norte en Directo", "Reportajes sobre turismo y cultura costeña.", TvCategory.CULTURA, "09:00", "12:00", 540, 720, "TP"),
+                    ProgramItem("pe_sol_3", "Edición Central", "Las noticias más importantes de La Libertad y el Perú.", TvCategory.NOTICIAS, "12:00", "14:30", 720, 870, "+14"),
+                    ProgramItem("pe_sol_4", "Deportes en Acción", "Seguimiento de los clubes de la Liga 1 en el norte.", TvCategory.DEPORTES, "14:30", "17:00", 870, 1020, "TP"),
+                    ProgramItem("pe_sol_5", "Noche Norteña", "Música de marinera y tradiciones peruanas.", TvCategory.MUSICA, "20:00", "23:00", 1200, 1380, "TP")
+                )
+            ),
+            Channel(
+                id = "pe_trivu_tv",
+                number = 40,
+                name = "Trivu TV Perú",
+                country = Country.PERU,
+                category = TvCategory.ENTRETENIMIENTO,
+                streamUrl = "https://stream2.trivutv.com/memfs/1bc8358a-665e-4bc1-a580-e4fcb54b5103.m3u8",
+                backupStreamUrls = listOf(
+                    "http://190.93.224.42/TRIVU-TV/index.m3u8",
+                    "http://bantel-cdn1.iptvperu.tv:1935/btnscrtn/tvperu.stream/playlist.m3u8"
+                ),
+                logoText = "TRV",
+                brandColorHex = 0xFF7C4DFF,
+                description = "Canal de entretenimiento, cultura pop, música y cine para el público joven.",
                 broadcastQuality = "HD 1080p",
                 schedule = listOf(
-                    ProgramItem("pe_ntv_1", "Nativa Deportes al Día", "La mejor previa de los encuentros del fútbol peruano y Copa Libertadores.", TvCategory.DEPORTES, "07:00", "09:30", 420, 570, "TP"),
-                    ProgramItem("pe_ntv_2", "Noticias con Opinión", "Análisis periodístico de los eventos que marcan la agenda del país.", TvCategory.NOTICIAS, "09:30", "12:00", 570, 720, "+14"),
-                    ProgramItem("pe_ntv_3", "Vóley Peruano: Liga Superior", "Resúmenes, entrevistas exclusivas con las voleibolistas nacionales.", TvCategory.DEPORTES, "12:00", "14:30", 720, 870, "TP"),
-                    ProgramItem("pe_ntv_4", "Tribuna Femenina", "El desarrollo del fútbol femenino y atletas de alta competencia en el Perú.", TvCategory.DEPORTES, "14:30", "17:00", 870, 1020, "TP"),
-                    ProgramItem("pe_ntv_5", "Fútbol en Vivo: La Previa", "Alineaciones, estadísticas y clima previo a los partidos de la fecha.", TvCategory.DEPORTES, "17:00", "19:30", 1020, 1170, "TP"),
-                    ProgramItem("pe_ntv_6", "Nativa Noche: Debate Deportivo", "La mesa de discusión más apasionada con exjugadores y cronistas.", TvCategory.DEPORTES, "19:30", "22:00", 1170, 1320, "+14"),
-                    ProgramItem("pe_ntv_7", "Tercer Tiempo", "Post-partido, análisis de jugadas polémicas y tabla de posiciones.", TvCategory.DEPORTES, "22:00", "24:00", 1320, 1440, "+14")
+                    ProgramItem("pe_trv_1", "Despierta Trivu", "Videos musicales, tendencias en redes y entrevistas.", TvCategory.ENTRETENIMIENTO, "07:00", "10:00", 420, 600, "TP"),
+                    ProgramItem("pe_trv_2", "Zona Gamer", "Análisis de videojuegos, esports y cultura tech.", TvCategory.ENTRETENIMIENTO, "10:00", "13:00", 600, 780, "TP"),
+                    ProgramItem("pe_trv_3", "Cine & Series", "Críticas de estrenos y entrevistas con realizadores.", TvCategory.ENTRETENIMIENTO, "15:00", "18:00", 900, 1080, "+14"),
+                    ProgramItem("pe_trv_4", "Trivu Night", "Música alternativa y conciertos en directo.", TvCategory.MUSICA, "20:00", "24:00", 1200, 1440, "TP")
                 )
             ),
 
@@ -194,42 +185,15 @@ object ChannelRepository {
             // CANALES DE COSTA RICA 🇨🇷
             // ==========================================
             Channel(
-                id = "cr_canal_13_sinart",
-                number = 13,
-                name = "Canal 13 Costa Rica (SINART)",
-                country = Country.COSTA_RICA,
-                category = TvCategory.CULTURA,
-                // Costa Rica public broadcaster
-                streamUrl = "https://5a7c5c2d33451.streamlock.net/costarica13/live/playlist.m3u8",
-                backupStreamUrls = listOf(
-                    "https://edge.sinartgo.com/live/canal13/index.m3u8",
-                    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-                ),
-                logoText = "C13",
-                brandColorHex = 0xFF0D47A1,
-                description = "Televisión de Costa Rica (SINART). Información veraz, fomento de la cultura, tradiciones campesinas y arte costarricense.",
-                broadcastQuality = "FHD 1080p",
-                schedule = listOf(
-                    ProgramItem("cr_13_1", "Café Nacional de Costa Rica", "El magazine matutino tradicional con recetas ticas, salud y emprendimientos.", TvCategory.ENTRETENIMIENTO, "06:30", "09:00", 390, 540, "TP", "Sergio Castro"),
-                    ProgramItem("cr_13_2", "Costa Rica Verde & Pura Vida", "Reportajes sobre los parques nacionales, biodiversidad y volcanes del país.", TvCategory.CULTURA, "09:00", "11:00", 540, 660, "TP"),
-                    ProgramItem("cr_13_3", "Treche Noticias Edición Mediodía", "Toda la actualidad de las 7 provincias costarricenses.", TvCategory.NOTICIAS, "11:00", "13:00", 660, 780, "+14"),
-                    ProgramItem("cr_13_4", "Identidades Ticas", "Músicos, pintores y saberes ancestrales de Guanacaste, Cartago y Limón.", TvCategory.CULTURA, "13:00", "15:30", 780, 930, "TP"),
-                    ProgramItem("cr_13_5", "Zona Deportiva Costarricense", "Fútbol nacional de la UNAFUT, ciclismo y surf en las playas ticas.", TvCategory.DEPORTES, "15:30", "18:00", 930, 1080, "TP"),
-                    ProgramItem("cr_13_6", "Treche Noticias Estelar", "El análisis profundo de los temas legislativos y económicos de San José.", TvCategory.NOTICIAS, "18:00", "20:30", 1080, 1230, "+14"),
-                    ProgramItem("cr_13_7", "Cultura & Cine SINART", "Cine iberoamericano y documentales galardonados.", TvCategory.ENTRETENIMIENTO, "20:30", "22:30", 1230, 1350, "+14"),
-                    ProgramItem("cr_13_8", "Noche de Baladas y Calypso", "La riqueza rítmica caribeña de Puerto Viejo y sones costarricenses.", TvCategory.MUSICA, "22:30", "24:00", 1350, 1440, "TP")
-                )
-            ),
-            Channel(
                 id = "cr_canal_8_multimedios",
                 number = 8,
                 name = "Canal 8 Costa Rica (Multimedios)",
                 country = Country.COSTA_RICA,
                 category = TvCategory.NOTICIAS,
-                streamUrl = "https://live.multimedios.cr/hls/canal8cr.m3u8",
+                streamUrl = "https://mdstrm.com/live-stream-playlist/5a7b1e63a8da282c34d65445.m3u8",
                 backupStreamUrls = listOf(
-                    "https://5a7c5c2d33451.streamlock.net/costarica13/live/playlist.m3u8",
-                    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"
+                    "https://d2n1wzrr0aogf5.cloudfront.net/ts:abr.m3u8",
+                    "https://59ef525c24caa.streamlock.net/vmtv/vmlatino/playlist.m3u8"
                 ),
                 logoText = "C8",
                 brandColorHex = 0xFFD81B60,
@@ -247,40 +211,15 @@ object ChannelRepository {
                 )
             ),
             Channel(
-                id = "cr_vm_latino",
-                number = 29,
-                name = "VM Latino (El Canal de la Música)",
-                country = Country.COSTA_RICA,
-                category = TvCategory.MUSICA,
-                streamUrl = "https://stream.vmlatino.com/live/vmlatino.m3u8",
-                backupStreamUrls = listOf(
-                    "https://edge.sinartgo.com/live/canal13/index.m3u8",
-                    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
-                ),
-                logoText = "VM",
-                brandColorHex = 0xFF7B1FA2,
-                description = "El canal de la música y la juventud de Costa Rica. Conciertos, estrenos mundiales, reggaeton, pop, rock y festivales.",
-                broadcastQuality = "HD 1080p",
-                schedule = listOf(
-                    ProgramItem("cr_vm_1", "Despertar con Éxitos", "Los mejores videos de música urbana y pop latino para empezar el día con energía.", TvCategory.MUSICA, "06:00", "09:00", 360, 540, "TP"),
-                    ProgramItem("cr_vm_2", "Los 10 Más Pedidos de Costa Rica", "El conteo oficial con los temas más votados por la audiencia tica.", TvCategory.MUSICA, "09:00", "12:00", 540, 720, "TP"),
-                    ProgramItem("cr_vm_3", "Sesiones Acústicas VM", "Artistas costarricenses e internacionales en formato íntimo y acústico.", TvCategory.MUSICA, "12:00", "14:30", 720, 870, "TP"),
-                    ProgramItem("cr_vm_4", "Zona Urbana & Reggaeton Hits", "Lo más nuevo de los exponentes del género urbano a nivel global.", TvCategory.MUSICA, "14:30", "17:30", 870, 1050, "+14"),
-                    ProgramItem("cr_vm_5", "Clásicos del Rock en Español", "Homenaje a las bandas legendarias que marcaron la historia musical hispana.", TvCategory.MUSICA, "17:30", "20:00", 1050, 1200, "TP"),
-                    ProgramItem("cr_vm_6", "Electro Party Costa Rica", "Los mejores DJs de música electrónica en vivo y festivales en Tamarindo.", TvCategory.MUSICA, "20:00", "22:30", 1200, 1350, "+14"),
-                    ProgramItem("cr_vm_7", "Trasnochando con VM", "Videoclips continuos sin interrupción para acompañar tu noche.", TvCategory.MUSICA, "22:30", "24:00", 1350, 1440, "TP")
-                )
-            ),
-            Channel(
                 id = "cr_extra_tv_42",
                 number = 42,
                 name = "Extra TV 42 Costa Rica",
                 country = Country.COSTA_RICA,
                 category = TvCategory.NOTICIAS,
-                streamUrl = "https://extratv.streamlock.net/live/extratv42/playlist.m3u8",
+                streamUrl = "https://d2n1wzrr0aogf5.cloudfront.net/ts:abr.m3u8",
                 backupStreamUrls = listOf(
-                    "https://5a7c5c2d33451.streamlock.net/costarica13/live/playlist.m3u8",
-                    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+                    "https://mdstrm.com/live-stream-playlist/5a7b1e63a8da282c34d65445.m3u8",
+                    "https://59ef525c24caa.streamlock.net/vmtv/vmlatino/playlist.m3u8"
                 ),
                 logoText = "X42",
                 brandColorHex = 0xFFFF5722,
@@ -297,54 +236,93 @@ object ChannelRepository {
                 )
             ),
             Channel(
-                id = "cr_teletica_7",
-                number = 7,
-                name = "Teletica 7 (Tica TV)",
+                id = "cr_vm_latino",
+                number = 29,
+                name = "VM Latino (Canal Música)",
                 country = Country.COSTA_RICA,
-                category = TvCategory.ENTRETENIMIENTO,
-                streamUrl = "https://teletica-live.akamaized.net/hls/live/2034909/teletica/master.m3u8",
+                category = TvCategory.MUSICA,
+                streamUrl = "https://59ef525c24caa.streamlock.net/vmtv/vmlatino/playlist.m3u8",
                 backupStreamUrls = listOf(
-                    "https://live.multimedios.cr/hls/canal8cr.m3u8",
-                    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4"
+                    "https://mdstrm.com/live-stream-playlist/5a7b1e63a8da282c34d65445.m3u8",
+                    "https://d2n1wzrr0aogf5.cloudfront.net/ts:abr.m3u8"
                 ),
-                logoText = "T7",
-                brandColorHex = 0xFF00C853,
-                description = "La señal preferida de Costa Rica: Telenoticias, 7 Días, Tu Cara Me Suena, toros a la tica y fútbol internacional.",
-                broadcastQuality = "FHD 1080p",
+                logoText = "VM",
+                brandColorHex = 0xFF7B1FA2,
+                description = "El canal de la música y la juventud de Costa Rica. Conciertos, estrenos mundiales, reggaeton, pop, rock y festivales.",
+                broadcastQuality = "HD 1080p",
                 schedule = listOf(
-                    ProgramItem("cr_t7_1", "Buen Día Costa Rica", "El programa de la mañana con temas de salud, jardinería, superación y optimismo.", TvCategory.ENTRETENIMIENTO, "08:00", "10:30", 480, 630, "TP", "Nancy Dobles"),
-                    ProgramItem("cr_t7_2", "De Boca en Boca", "Los chismes, entrevistas exclusivas y la movida de las estrellas ticas.", TvCategory.ENTRETENIMIENTO, "10:30", "12:00", 630, 720, "TP", "Bismarck Méndez"),
-                    ProgramItem("cr_t7_3", "Telenoticias Edición Mediodía", "El noticiero líder de la televisión costarricense con credibilidad comprobada.", TvCategory.NOTICIAS, "12:00", "14:00", 720, 840, "+14", "Ignacio Santos"),
-                    ProgramItem("cr_t7_4", "Novela de la Tarde", "Grandes producciones dramáticas internacionales para emocionar al público.", TvCategory.ENTRETENIMIENTO, "14:00", "16:30", 840, 990, "+14"),
-                    ProgramItem("cr_t7_5", "La Media Docena & Humor Tico", "Comedia sana con personajes populares de las tradiciones costarricenses.", TvCategory.ENTRETENIMIENTO, "16:30", "19:00", 990, 1140, "TP"),
-                    ProgramItem("cr_t7_6", "Telenoticias Central", "El recuento minucioso de las principales noticias de Costa Rica y el orbe.", TvCategory.NOTICIAS, "19:00", "21:00", 1140, 1260, "+14"),
-                    ProgramItem("cr_t7_7", "7 Días: Reportajes de Fondo", "Investigación periodística de alto calibre con denuncias y análisis.", TvCategory.NOTICIAS, "21:00", "22:30", 1260, 1350, "+14", "Rodolfo González"),
-                    ProgramItem("cr_t7_8", "Zona de Gol Tica", "Todos los goles de la Liga Promerica costarricense y la Selección Nacional.", TvCategory.DEPORTES, "22:30", "24:00", 1350, 1440, "TP")
+                    ProgramItem("cr_vm_1", "Despertar con Éxitos", "Los mejores videos de música urbana y pop latino para empezar el día con energía.", TvCategory.MUSICA, "06:00", "09:00", 360, 540, "TP"),
+                    ProgramItem("cr_vm_2", "Los 10 Más Pedidos de Costa Rica", "El conteo oficial con los temas más votados por la audiencia tica.", TvCategory.MUSICA, "09:00", "12:00", 540, 720, "TP"),
+                    ProgramItem("cr_vm_3", "Sesiones Acústicas VM", "Artistas costarricenses e internacionales en formato íntimo y acústico.", TvCategory.MUSICA, "12:00", "14:30", 720, 870, "TP"),
+                    ProgramItem("cr_vm_4", "Zona Urbana & Reggaeton Hits", "Lo más nuevo de los exponentes del género urbano a nivel global.", TvCategory.MUSICA, "14:30", "17:30", 870, 1050, "+14"),
+                    ProgramItem("cr_vm_5", "Clásicos del Rock en Español", "Homenaje a las bandas legendarias que marcaron la historia musical hispana.", TvCategory.MUSICA, "17:30", "20:00", 1050, 1200, "TP"),
+                    ProgramItem("cr_vm_6", "Electro Party Costa Rica", "Los mejores DJs de música electrónica en vivo y festivales en Tamarindo.", TvCategory.MUSICA, "20:00", "22:30", 1200, 1350, "+14"),
+                    ProgramItem("cr_vm_7", "Trasnochando con VM", "Videoclips continuos sin interrupción para acompañar tu noche.", TvCategory.MUSICA, "22:30", "24:00", 1350, 1440, "TP")
                 )
             ),
             Channel(
-                id = "cr_san_carlos_tv",
-                number = 14,
-                name = "San Carlos TV & Norte",
+                id = "cr_canal_1",
+                number = 1,
+                name = "Canal 1 Costa Rica",
                 country = Country.COSTA_RICA,
-                category = TvCategory.CULTURA,
-                streamUrl = "https://tvn14.streamlock.net/live/tvn14/playlist.m3u8",
+                category = TvCategory.ENTRETENIMIENTO,
+                streamUrl = "https://vid.canal1cr.com:3424/multi_live/play_720.m3u8",
                 backupStreamUrls = listOf(
-                    "https://5a7c5c2d33451.streamlock.net/costarica13/live/playlist.m3u8",
-                    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4"
+                    "https://mdstrm.com/live-stream-playlist/5a7b1e63a8da282c34d65445.m3u8",
+                    "https://d2n1wzrr0aogf5.cloudfront.net/ts:abr.m3u8"
                 ),
-                logoText = "SC",
-                brandColorHex = 0xFF0097A7,
-                description = "Voz y sentir de la Zona Norte de Costa Rica. Ganadería, agricultura, ecoturismo en el Volcán Arenal y tradiciones locales.",
+                logoText = "C1",
+                brandColorHex = 0xFF0D47A1,
+                description = "Señal abierta costarricense con programación de entretenimiento, cultura, noticias y series.",
                 broadcastQuality = "HD 720p",
                 schedule = listOf(
-                    ProgramItem("cr_sc_1", "Amanecer Norteño", "Noticias del campo, ferias del agricultor y estado del clima en San Carlos.", TvCategory.NOTICIAS, "06:00", "08:30", 360, 510, "TP"),
-                    ProgramItem("cr_sc_2", "Tradición Sancarleña", "Historias de los pioneros, rodeo campesino y exposiciones ganaderas.", TvCategory.CULTURA, "08:30", "11:30", 510, 690, "TP"),
-                    ProgramItem("cr_sc_3", "Noticiero Regional Norte", "Información detallada de Alajuela, San Carlos, Upala y Los Chiles.", TvCategory.NOTICIAS, "11:30", "13:30", 690, 810, "TP"),
-                    ProgramItem("cr_sc_4", "Ecoturismo Arenal", "Recorridos por senderos, aguas termales y biodiversidad de la llanura norteña.", TvCategory.CULTURA, "13:30", "16:00", 810, 960, "TP"),
-                    ProgramItem("cr_sc_5", "Fútbol Regional Tico", "Partidos de los Torneos Cantonales y el equipo de la Asociación Deportiva San Carlos.", TvCategory.DEPORTES, "16:00", "18:30", 960, 1110, "TP"),
-                    ProgramItem("cr_sc_6", "Noticias de la Noche Norteña", "Resumen de los hechos comunitarios de la jornada.", TvCategory.NOTICIAS, "18:30", "21:00", 1110, 1260, "TP"),
-                    ProgramItem("cr_sc_7", "Noche Campesina y Folclor", "Música ranchera, trova y anécdotas de la Costa Rica rural.", TvCategory.MUSICA, "21:00", "24:00", 1260, 1440, "TP")
+                    ProgramItem("cr_c1_1", "Amanecer Costarricense", "Magazine matutino con recetas, salud y entrevistas.", TvCategory.ENTRETENIMIENTO, "06:30", "09:00", 390, 540, "TP"),
+                    ProgramItem("cr_c1_2", "Noticiero Central 1", "Información de las 7 provincias costarricenses.", TvCategory.NOTICIAS, "12:00", "14:00", 720, 840, "+14"),
+                    ProgramItem("cr_c1_3", "Cultura & Paisajes Ticos", "Biodiversidad, volcanes y playas costarricenses.", TvCategory.CULTURA, "15:00", "17:30", 900, 1050, "TP"),
+                    ProgramItem("cr_c1_4", "Noche de Estrellas", "Series y películas de gran impacto.", TvCategory.ENTRETENIMIENTO, "20:00", "23:00", 1200, 1380, "TP")
+                )
+            ),
+            Channel(
+                id = "cr_tv_sur_14",
+                number = 14,
+                name = "TV Sur Canal 14",
+                country = Country.COSTA_RICA,
+                category = TvCategory.CULTURA,
+                streamUrl = "https://k20.usastreams.com:8081/tvsur/index.m3u8",
+                backupStreamUrls = listOf(
+                    "https://mdstrm.com/live-stream-playlist/5a7b1e63a8da282c34d65445.m3u8",
+                    "https://59ef525c24caa.streamlock.net/vmtv/vmlatino/playlist.m3u8"
+                ),
+                logoText = "S14",
+                brandColorHex = 0xFF0097A7,
+                description = "Voz y sentir del cantón de Pérez Zeledón y la Región Brunca de Costa Rica.",
+                broadcastQuality = "HD 720p",
+                schedule = listOf(
+                    ProgramItem("cr_sur_1", "Amanecer Brunca", "Noticias rurales, agricultura y clima de Pérez Zeledón.", TvCategory.NOTICIAS, "06:00", "08:30", 360, 510, "TP"),
+                    ProgramItem("cr_sur_2", "Tradición Sureña", "Historias de los pioneros y vida comunitaria.", TvCategory.CULTURA, "08:30", "11:30", 510, 690, "TP"),
+                    ProgramItem("cr_sur_3", "Noticiero Regional Sur", "Actualidad del Pacífico Sur y San José.", TvCategory.NOTICIAS, "11:30", "13:30", 690, 810, "TP"),
+                    ProgramItem("cr_sur_4", "Música Campesina", "Folclor y notas autóctonas costarricenses.", TvCategory.MUSICA, "18:00", "21:00", 1080, 1260, "TP")
+                )
+            ),
+            Channel(
+                id = "cr_agrotendencia",
+                number = 50,
+                name = "Agrotendencia TV",
+                country = Country.COSTA_RICA,
+                category = TvCategory.CULTURA,
+                streamUrl = "https://5fc584f3f19c9.streamlock.net/agrotendencia/videoagrotendencia_hls1/playlist.m3u8",
+                backupStreamUrls = listOf(
+                    "https://mdstrm.com/live-stream-playlist/5a7b1e63a8da282c34d65445.m3u8"
+                ),
+                logoText = "AGRO",
+                brandColorHex = 0xFF388E3C,
+                description = "Canal agropecuario con cobertura de tecnología agrícola, ganadería y ecología de Centroamérica.",
+                broadcastQuality = "HD 720p",
+                schedule = listOf(
+                    ProgramItem("cr_agro_1", "El Campo Hoy", "Informes técnicos de agronomía y cosechas sostenibles.", TvCategory.CULTURA, "06:00", "09:00", 360, 540, "TP"),
+                    ProgramItem("cr_agro_2", "Ganadería Moderna", "Técnicas de producción ganadera y sanidad animal.", TvCategory.CULTURA, "09:00", "12:00", 540, 720, "TP"),
+                    ProgramItem("cr_agro_3", "Mercados del Café y Cacao", "Cotizaciones internacionales y valor agregado.", TvCategory.NOTICIAS, "14:00", "16:30", 840, 990, "TP"),
+                    ProgramItem("cr_agro_4", "Ecosistemas y Agua", "Conservación de suelos y cuencas hidrográficas.", TvCategory.CULTURA, "19:00", "22:00", 1140, 1320, "TP")
                 )
             )
         )
