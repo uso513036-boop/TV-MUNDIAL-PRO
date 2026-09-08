@@ -182,12 +182,8 @@ class TvPlayerManager(private val context: Context) {
     }
 
     fun cycleResizeMode() {
-        // 4: ZOOM (16:9 / aprovecha pantalla sin bordes), 3: FILL (estirar), 0: FIT (original)
-        val nextMode = when (_playbackState.value.resizeMode) {
-            4 -> 3
-            3 -> 0
-            else -> 4
-        }
+        // Alternar entre 0: FIT (16:9 Original completo sin recorte) y 3: FILL (Llenar pantalla 20:9)
+        val nextMode = if (_playbackState.value.resizeMode == 0) 3 else 0
         _playbackState.value = _playbackState.value.copy(resizeMode = nextMode)
     }
 

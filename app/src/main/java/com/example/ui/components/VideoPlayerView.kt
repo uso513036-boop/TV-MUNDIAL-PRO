@@ -100,7 +100,7 @@ fun VideoPlayerView(
             }
             .testTag("video_player_container")
     ) {
-        // Embedded Android Media3 PlayerView - Ajuste automático de aspecto (sin recortar ni estirar)
+        // Embedded Android Media3 PlayerView - Ajuste automático de aspecto (16:9 original por defecto)
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
@@ -110,12 +110,12 @@ fun VideoPlayerView(
                     )
                     useController = false // Custom simplified Compose controls
                     player = playerManager.getPlayer()
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    resizeMode = playbackState.resizeMode
                 }
             },
             update = { playerView ->
                 playerView.player = playerManager.getPlayer()
-                playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                playerView.resizeMode = playbackState.resizeMode
             },
             modifier = Modifier.fillMaxSize()
         )
@@ -217,11 +217,31 @@ fun VideoPlayerView(
                         modifier = Modifier.weight(1f, fill = false)
                     )
 
-                    // Direct controls: Mute and Fullscreen toggle (sin menú de opciones de formato)
+                    // Direct controls: Aspect ratio, Mute, and Fullscreen toggle
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        // Selector directo 16:9 (Original sin recortes) <-> 20:9 (Llenar pantalla)
+                        Surface(
+                            onClick = { playerManager.cycleResizeMode() },
+                            color = if (playbackState.resizeMode == AspectRatioFrameLayout.RESIZE_MODE_FIT) {
+                                Color.White.copy(alpha = 0.18f)
+                            } else {
+                                Color(0xFF00E5FF).copy(alpha = 0.25f)
+                            },
+                            shape = RoundedCornerShape(4.dp),
+                            modifier = Modifier.testTag("player_aspect_ratio_chip")
+                        ) {
+                            Text(
+                                text = if (playbackState.resizeMode == AspectRatioFrameLayout.RESIZE_MODE_FIT) "16:9" else "20:9",
+                                color = if (playbackState.resizeMode == AspectRatioFrameLayout.RESIZE_MODE_FIT) Color.White else Color(0xFF00E5FF),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
+                            )
+                        }
+
                         IconButton(
                             onClick = { playerManager.toggleMute() },
                             modifier = Modifier
