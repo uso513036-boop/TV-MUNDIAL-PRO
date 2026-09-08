@@ -181,14 +181,15 @@ object ChannelRepository {
             Channel(
                 id = "cr_canal_8_multimedios",
                 number = 8,
-                name = "Canal 8 Costa Rica (Multimedios)",
+                name = "Multimedios",
+                shortName = "Multimedios",
                 country = Country.COSTA_RICA,
                 category = TvCategory.NOTICIAS,
                 streamUrl = "https://mdstrm.com/live-stream-playlist/5a7b1e63a8da282c34d65445.m3u8",
                 backupStreamUrls = emptyList(),
-                logoText = "C8",
+                logoText = "MM",
                 brandColorHex = 0xFFD81B60,
-                description = "Canal 8 de Costa Rica con noticias de última hora, entretenimiento, fútbol de primera división y programas de opinión.",
+                description = "Señal de Multimedios Costa Rica con noticias de última hora, entretenimiento, fútbol de primera división y programas de opinión.",
                 broadcastQuality = "HD 1080p",
                 schedule = listOf(
                     ProgramItem("cr_8_1", "Telediario Al Minuto Costa Rica", "El primer noticiero matutino con la información del tránsito en el GAM.", TvCategory.NOTICIAS, "05:45", "08:30", 345, 510, "TP"),
