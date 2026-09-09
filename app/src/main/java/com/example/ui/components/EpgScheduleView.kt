@@ -71,14 +71,15 @@ fun EpgScheduleView(
     isEpgSyncing: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    // Current simulated minute of day for live progress
+        // Current simulated minute of day for live progress
     val calendar = remember { Calendar.getInstance() }
     val currentMinutes = remember {
         calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
     }
+    val currentEpochMs = remember { System.currentTimeMillis() }
 
     val currentProgram = remember(channel, currentMinutes) {
-        channel.getCurrentProgram(currentMinutes)
+        channel.getCurrentProgram(currentMinutes, currentEpochMs)
     }
 
     val expandedItems = remember { mutableStateMapOf<String, Boolean>() }
@@ -336,16 +337,46 @@ fun EpgScheduleView(
         }
 
         // Full Schedule List
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(channel.schedule, key = { it.id }) { item ->
-                val isExpanded = expandedItems[item.id] ?: false
-                val isLiveNow = item.isCurrentlyAiring(currentMinutes)
-                val isReminder = remindersState.contains(item.id)
+        if (channel.schedule.isEmpty()) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Programación no disponible",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "No se cuenta con guía oficial XMLTV verificada para este canal en este momento.",
+                        color = Color(0xFF64748B),
+                        fontSize = 12.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(channel.schedule, key = { it.id }) { item ->
+                    val isExpanded = expandedItems[item.id] ?: false
+                    val isLiveNow = item.isCurrentlyAiring(currentMinutes, currentEpochMs)
+                    val isReminder = remindersState.contains(item.id)
 
                 Card(
                     colors = CardDefaults.cardColors(
@@ -472,4 +503,5 @@ fun EpgScheduleView(
             }
         }
     }
+}
 }

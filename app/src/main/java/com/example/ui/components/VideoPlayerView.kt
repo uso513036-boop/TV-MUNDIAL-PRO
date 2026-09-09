@@ -97,6 +97,7 @@ fun VideoPlayerView(
     var showFullscreenSwipeHint by remember { mutableStateOf(false) }
 
     // Re-evaluar programa en emisión periódicamente
+    var currentEpochMs by remember { mutableStateOf(System.currentTimeMillis()) }
     var currentTimeMinutes by remember {
         val cal = Calendar.getInstance()
         mutableStateOf(cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE))
@@ -106,16 +107,17 @@ fun VideoPlayerView(
         while (true) {
             val cal = Calendar.getInstance()
             currentTimeMinutes = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+            currentEpochMs = System.currentTimeMillis()
             delay(30_000)
         }
     }
 
-    val currentProgram = remember(channel, currentTimeMinutes) {
-        channel.getCurrentProgram(currentTimeMinutes)
+    val currentProgram = remember(channel, currentTimeMinutes, currentEpochMs) {
+        channel.getCurrentProgram(currentTimeMinutes, currentEpochMs)
     }
 
-    val nextProgram = remember(channel, currentTimeMinutes) {
-        channel.getNextProgram(currentTimeMinutes)
+    val nextProgram = remember(channel, currentTimeMinutes, currentEpochMs) {
+        channel.getNextProgram(currentTimeMinutes, currentEpochMs)
     }
 
     // Ocultar controles automáticamente tras 4.5 segundos de inactividad
@@ -418,6 +420,9 @@ fun VideoPlayerView(
                             vertical = if (isFullscreen) 10.dp else 6.dp
                         )
                     ) {
+                        val hasRealCurrent = channel.isRealEpg && currentProgram != null
+                        val hasRealNext = channel.isRealEpg && nextProgram != null
+
                         // Fila 1: 📺 "Estás viendo:" + Nombre del programa + ⏰ Horario de inicio y fin
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -435,21 +440,21 @@ fun VideoPlayerView(
                                     fontSize = if (isFullscreen) 13.5.sp else 11.sp
                                 )
                                 Text(
-                                    text = currentProgram?.title ?: channel.name,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.SemiBold,
+                                    text = if (hasRealCurrent) currentProgram!!.title else "Programación no disponible",
+                                    color = if (hasRealCurrent) Color.White else Color(0xFF94A3B8),
+                                    fontWeight = if (hasRealCurrent) FontWeight.SemiBold else FontWeight.Normal,
                                     fontSize = if (isFullscreen) 14.sp else 11.5.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
 
-                            // ⏰ Horario de inicio y fin + Badge EPG
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                if (currentProgram != null && currentProgram.startTime.isNotBlank()) {
+                            // ⏰ Horario de inicio y fin + Badge EPG (Solo si es programación real)
+                            if (hasRealCurrent && currentProgram!!.startTime.isNotBlank()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
                                     Surface(
                                         color = Color.White.copy(alpha = 0.12f),
                                         shape = RoundedCornerShape(4.dp)
@@ -462,9 +467,7 @@ fun VideoPlayerView(
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                     }
-                                }
 
-                                if (currentProgram?.isRealEpg == true || channel.isRealEpg) {
                                     Surface(
                                         color = Color(0xFF00C853).copy(alpha = 0.25f),
                                         border = BorderStroke(0.5.dp, Color(0xFF00C853)),
@@ -482,9 +485,9 @@ fun VideoPlayerView(
                             }
                         }
 
-                        // Barra de progreso del programa actual
-                        if (currentProgram != null) {
-                            val progress = currentProgram.getProgressPercent(currentTimeMinutes)
+                        // Barra de progreso del programa actual (Solo con datos reales)
+                        if (hasRealCurrent) {
+                            val progress = currentProgram!!.getProgressPercent(currentTimeMinutes, currentEpochMs)
                             Spacer(modifier = Modifier.height(if (isFullscreen) 6.dp else 4.dp))
                             LinearProgressIndicator(
                                 progress = { progress },
@@ -511,12 +514,12 @@ fun VideoPlayerView(
                                 fontSize = if (isFullscreen) 12.5.sp else 10.sp
                             )
                             Text(
-                                text = if (nextProgram != null) {
-                                    "${nextProgram.title} (${nextProgram.startTime})"
+                                text = if (hasRealNext) {
+                                    "${nextProgram!!.title} (${nextProgram.startTime})"
                                 } else {
-                                    "Continuación de programación regular"
+                                    "Programación no disponible"
                                 },
-                                color = Color(0xFFE2E8F0),
+                                color = if (hasRealNext) Color(0xFFE2E8F0) else Color(0xFF94A3B8),
                                 fontSize = if (isFullscreen) 12.5.sp else 10.sp,
                                 fontWeight = FontWeight.Normal,
                                 maxLines = 1,

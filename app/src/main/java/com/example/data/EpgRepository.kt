@@ -36,7 +36,7 @@ class EpgRepository(private val context: Context) {
         .followRedirects(true)
         .build()
 
-    private val cacheFileName = "real_epg_cache_v2.json"
+    private val cacheFileName = "real_epg_cache_v3.json"
     private val prefs = context.getSharedPreferences("epg_repo_prefs", Context.MODE_PRIVATE)
 
     companion object {
@@ -44,13 +44,26 @@ class EpgRepository(private val context: Context) {
         private const val CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000L // 24 hours (1 day)
         private const val PREF_KEY_LAST_SYNC = "last_epg_sync_time"
 
-        // Primary sources (fast gzip feeds updated daily)
-        private const val URL_PE_PRIMARY = "https://epg.lat/files/pe.xml.gz"
-        private const val URL_CR_PRIMARY = "https://epg.lat/files/cr.xml.gz"
+        // Sources queried (epgshare01, iptv-org GitHub, Telefonica CDN API, epg.lat, tdtchannels)
+        // 1. epgshare01.online (official ripper feeds for Peru & Costa Rica)
+        private const val URL_PE_EPGSHARE = "https://epgshare01.online/epgshare01/epg_ripper_PE1.xml.gz"
+        private const val URL_CR_EPGSHARE = "https://epgshare01.online/epgshare01/epg_ripper_CR1.xml.gz"
 
-        // Fallback sources (XMLTV raw XML / iptv-epg)
-        private const val URL_PE_FALLBACK = "https://iptv-epg.org/files/epg-pe.xml"
-        private const val URL_CR_FALLBACK = "https://iptv-epg.org/files/epg-cr.xml"
+        // 2. epg.lat (daily XMLTV feeds)
+        private const val URL_PE_EPGLAT = "https://epg.lat/files/pe.xml.gz"
+        private const val URL_CR_EPGLAT = "https://epg.lat/files/cr.xml.gz"
+
+        // 3. Telefonica CDN Direct Schedule API (Movistar Play Perú real verified schedule)
+        // Matches iptv-org/epg tv.movistar.com.pe site scraper
+        private val PE_MOVISTAR_PIDS = mapOf(
+            "pe_tv_peru" to "lch2204",
+            "pe_tv_peru_noticias" to "lch6468",
+            "pe_rpp_tv" to "lch2459",
+            "pe_usmp_tv" to "lch4105",
+            "pe_pbo_tv" to "lch2219",
+            "pe_sol_tv" to "lch6473",
+            "pe_trivu_tv" to "lch7161"
+        )
     }
 
     /**
@@ -101,13 +114,14 @@ class EpgRepository(private val context: Context) {
                                 rating = pObj.optString("rating", "TP"),
                                 hostOrStar = pObj.optString("hostOrStar", ""),
                                 epochStartMs = pObj.optLong("epochStartMs", 0L),
-                                epochEndMs = pObj.optLong("epochEndMs", 0L)
+                                epochEndMs = pObj.optLong("epochEndMs", 0L),
+                                isRealEpg = true
                             )
                         )
                     }
                     channel.copy(schedule = realPrograms, isRealEpg = true)
                 } else {
-                    channel
+                    channel.copy(schedule = emptyList(), isRealEpg = false)
                 }
             }
         } catch (e: Exception) {
@@ -126,24 +140,32 @@ class EpgRepository(private val context: Context) {
             return@withContext applyCachedEpg(channels)
         }
 
-        Log.d(TAG, "Starting download and parsing of real XMLTV EPG data...")
+        Log.d(TAG, "Starting download and parsing of real EPG data from epgshare01, iptv-org and epg.lat...")
         val programsByChannelId = mutableMapOf<String, MutableList<ProgramItem>>()
 
-        // Build matching index for channels
-        val channelMatchMap = buildChannelMatchMap(channels)
-
-        // 1. Download & Parse Peru EPG
+        // 1. Fetch Peru EPG from iptv-org scraper API (Telefonica/Movistar Play PE) for official real-time EPG
+        val peruChannels = channels.filter { it.country == Country.PERU }
+        val peruMatchMap = buildChannelMatchMap(peruChannels)
         try {
-            fetchAndParseXmltv(URL_PE_PRIMARY, URL_PE_FALLBACK, Country.PERU, channelMatchMap, programsByChannelId)
+            fetchPeruMovistarEpg(peruChannels, programsByChannelId)
         } catch (e: Exception) {
-            Log.w(TAG, "Failed parsing Peru XMLTV from primary/fallback: ${e.message}")
+            Log.w(TAG, "Failed fetching Peru Telefonica/Movistar EPG: ${e.message}")
         }
 
-        // 2. Download & Parse Costa Rica EPG
+        // 2. Fetch epgshare01.online & epg.lat XMLTV for Peru (fills any remaining programs)
         try {
-            fetchAndParseXmltv(URL_CR_PRIMARY, URL_CR_FALLBACK, Country.COSTA_RICA, channelMatchMap, programsByChannelId)
+            fetchAndParseXmltv(URL_PE_EPGSHARE, URL_PE_EPGLAT, Country.PERU, peruMatchMap, programsByChannelId)
         } catch (e: Exception) {
-            Log.w(TAG, "Failed parsing Costa Rica XMLTV from primary/fallback: ${e.message}")
+            Log.w(TAG, "Failed parsing Peru XMLTV from epgshare01/epg.lat: ${e.message}")
+        }
+
+        // 3. Fetch Costa Rica EPG from epgshare01.online & epg.lat XMLTV
+        val crChannels = channels.filter { it.country == Country.COSTA_RICA }
+        val crMatchMap = buildChannelMatchMap(crChannels)
+        try {
+            fetchAndParseXmltv(URL_CR_EPGSHARE, URL_CR_EPGLAT, Country.COSTA_RICA, crMatchMap, programsByChannelId)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed parsing Costa Rica XMLTV from epgshare01/epg.lat: ${e.message}")
         }
 
         // 3. Save to local disk cache for fast daily reuse
@@ -154,11 +176,11 @@ class EpgRepository(private val context: Context) {
         val updated = channels.map { channel ->
             val fetchedPrograms = programsByChannelId[channel.id]
             if (!fetchedPrograms.isNullOrEmpty()) {
-                // Sort programs by time
-                val sorted = fetchedPrograms.sortedBy { if (it.epochStartMs > 0L) it.epochStartMs else it.startMinutes.toLong() }
+                // Deduplicate and sort programs by time
+                val sorted = fetchedPrograms.distinctBy { it.id }.sortedBy { if (it.epochStartMs > 0L) it.epochStartMs else it.startMinutes.toLong() }
                 channel.copy(schedule = sorted, isRealEpg = true)
             } else {
-                channel
+                channel.copy(schedule = emptyList(), isRealEpg = false)
             }
         }
 
@@ -193,6 +215,85 @@ class EpgRepository(private val context: Context) {
             .replace("ú", "u")
             .replace("ñ", "n")
             .replace(Regex("[^a-z0-9]"), "")
+    }
+
+    private fun fetchPeruMovistarEpg(
+        peruChannels: List<Channel>,
+        outPrograms: MutableMap<String, MutableList<ProgramItem>>
+    ) {
+        val now = System.currentTimeMillis() / 1000L
+        val start = now - 3600L // 1 hour ago
+        val end = now + 86400L  // 24 hours ahead
+        val pids = PE_MOVISTAR_PIDS.values.joinToString(",")
+        val url = "https://contentapi-pe.cdn.telefonica.com/28/default/es-PE/schedules?fields=Pid,Title,Description,ChannelName,LiveChannelPid,Start,End&orderBy=START_TIME%3Aa&filteravailability=false&starttime=$start&endtime=$end&livechannelpids=$pids"
+
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+            .build()
+
+        val response = httpClient.newCall(request).execute()
+        if (!response.isSuccessful) {
+            response.close()
+            Log.w(TAG, "Telefonica API returned HTTP ${response.code}")
+            return
+        }
+
+        val jsonStr = response.body?.string() ?: return
+        val root = JSONObject(jsonStr)
+        val content = root.optJSONArray("Content") ?: return
+
+        val pidToChannelId = PE_MOVISTAR_PIDS.entries.associate { it.value.lowercase() to it.key }
+        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault()).apply {
+            timeZone = TimeZone.getTimeZone("America/Lima")
+        }
+        val cal = Calendar.getInstance(TimeZone.getTimeZone("America/Lima"))
+
+        for (i in 0 until content.length()) {
+            val item = content.optJSONObject(i) ?: continue
+            val livePid = item.optString("LiveChannelPid").lowercase()
+            val targetAppChannelId = pidToChannelId[livePid] ?: continue
+            val targetChannel = peruChannels.find { it.id == targetAppChannelId } ?: continue
+
+            val title = item.optString("Title", "").trim()
+            if (title.isEmpty()) continue
+            val desc = item.optString("Description", "Transmisión oficial de ${targetChannel.name}").trim()
+
+            val startSec = item.optLong("Start", 0L)
+            val endSec = item.optLong("End", 0L)
+            if (startSec <= 0L || endSec <= 0L) continue
+
+            val startMs = startSec * 1000L
+            val endMs = endSec * 1000L
+
+            cal.timeInMillis = startMs
+            val startMinutes = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+            val startTimeStr = timeFormat.format(Date(startMs))
+
+            cal.timeInMillis = endMs
+            val endMinutes = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+            val endTimeStr = timeFormat.format(Date(endMs))
+
+            val cat = mapCategory(null, title)
+            val program = ProgramItem(
+                id = "${targetChannel.id}_$startMs",
+                title = title,
+                description = desc,
+                category = cat,
+                startTime = startTimeStr,
+                endTime = endTimeStr,
+                startMinutes = startMinutes,
+                endMinutes = endMinutes,
+                rating = "TP",
+                epochStartMs = startMs,
+                epochEndMs = endMs,
+                isRealEpg = true
+            )
+
+            val list = outPrograms.getOrPut(targetChannel.id) { mutableListOf() }
+            list.add(program)
+        }
+        Log.d(TAG, "Telefonica/Movistar API: Loaded programs for ${outPrograms.size} Peru channels")
     }
 
     private fun fetchAndParseXmltv(
@@ -406,11 +507,12 @@ class EpgRepository(private val context: Context) {
         // Exact match on display name
         if (normDisp.isNotEmpty()) {
             channelMatchMap[normDisp]?.let { return it }
+            channelMatchMap[displayName.lowercase()]?.let { return it }
         }
 
-        // Substring / fuzzy match
+        // Substring / fuzzy match (supports 3+ chars such as rpp, c1, etc.)
         for ((key, channel) in channelMatchMap) {
-            if (key.length >= 4) {
+            if (key.length >= 3) {
                 if (normId.contains(key) || (normDisp.isNotEmpty() && normDisp.contains(key))) {
                     return channel
                 }
