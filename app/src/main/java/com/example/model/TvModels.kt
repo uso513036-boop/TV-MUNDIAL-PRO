@@ -31,9 +31,15 @@ data class ProgramItem(
     val endMinutes: Int,   // minutes from 00:00
     val rating: String = "TP", // "TP", "+14", "+18"
     val hostOrStar: String = "",
-    val isReminderSet: Boolean = false
+    val isReminderSet: Boolean = false,
+    val epochStartMs: Long = 0L,
+    val epochEndMs: Long = 0L,
+    val isRealEpg: Boolean = false
 ) {
-    fun isCurrentlyAiring(currentMinutes: Int): Boolean {
+    fun isCurrentlyAiring(currentMinutes: Int, currentEpochMs: Long = System.currentTimeMillis()): Boolean {
+        if (epochStartMs > 0L && epochEndMs > 0L) {
+            return currentEpochMs in epochStartMs until epochEndMs
+        }
         return if (endMinutes > startMinutes) {
             currentMinutes in startMinutes until endMinutes
         } else {
@@ -42,7 +48,12 @@ data class ProgramItem(
         }
     }
 
-    fun getProgressPercent(currentMinutes: Int): Float {
+    fun getProgressPercent(currentMinutes: Int, currentEpochMs: Long = System.currentTimeMillis()): Float {
+        if (epochStartMs > 0L && epochEndMs > 0L) {
+            val duration = epochEndMs - epochStartMs
+            if (duration <= 0L) return 0f
+            return ((currentEpochMs - epochStartMs).toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+        }
         val total = if (endMinutes > startMinutes) {
             endMinutes - startMinutes
         } else {
@@ -77,7 +88,9 @@ data class Channel(
     val description: String,
     val broadcastQuality: String = "HD 1080p",
     val schedule: List<ProgramItem>,
-    val isFavorite: Boolean = false
+    val isFavorite: Boolean = false,
+    val epgAliases: List<String> = emptyList(),
+    val isRealEpg: Boolean = false
 ) {
     val displayShortName: String
         get() = if (shortName.isNotBlank()) shortName else {
@@ -89,14 +102,26 @@ data class Channel(
                 .trim()
         }
 
-    fun getCurrentProgram(currentMinutes: Int): ProgramItem? {
-        return schedule.find { it.isCurrentlyAiring(currentMinutes) } ?: schedule.firstOrNull()
+    fun getCurrentProgram(currentMinutes: Int, currentEpochMs: Long = System.currentTimeMillis()): ProgramItem? {
+        val nowProgram = schedule.find { it.isCurrentlyAiring(currentMinutes, currentEpochMs) }
+        if (nowProgram != null) return nowProgram
+
+        // If real epoch timestamps are available, find the closest program around now
+        if (schedule.isNotEmpty() && schedule.first().epochStartMs > 0L) {
+            val upcoming = schedule.filter { it.epochEndMs > currentEpochMs }
+            if (upcoming.isNotEmpty()) return upcoming.first()
+        }
+
+        return schedule.firstOrNull()
     }
 
-    fun getNextProgram(currentMinutes: Int): ProgramItem? {
-        val currentIndex = schedule.indexOfFirst { it.isCurrentlyAiring(currentMinutes) }
+    fun getNextProgram(currentMinutes: Int, currentEpochMs: Long = System.currentTimeMillis()): ProgramItem? {
+        val currentIndex = schedule.indexOfFirst { it.isCurrentlyAiring(currentMinutes, currentEpochMs) }
         return if (currentIndex != -1 && currentIndex + 1 < schedule.size) {
             schedule[currentIndex + 1]
+        } else if (schedule.isNotEmpty() && schedule.first().epochStartMs > 0L) {
+            val futurePrograms = schedule.filter { it.epochStartMs > currentEpochMs }
+            futurePrograms.firstOrNull() ?: if (schedule.size > 1) schedule[1] else null
         } else if (schedule.size > 1) {
             schedule[1]
         } else null

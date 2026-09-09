@@ -3,7 +3,9 @@ package com.example.ui
 import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.data.ChannelRepository
+import com.example.data.EpgRepository
 import com.example.model.Channel
 import com.example.model.Country
 import com.example.model.ProgramItem
@@ -12,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 enum class AppTab(val title: String) {
     EN_VIVO("En Vivo"),
@@ -30,7 +33,9 @@ data class TvUiState(
     val isFullscreen: Boolean = false,
     val favoriteIds: Set<String> = emptySet(),
     val reminderIds: Set<String> = emptySet(),
-    val snackbarMessage: String? = null
+    val snackbarMessage: String? = null,
+    val isEpgSyncing: Boolean = false,
+    val lastEpgSyncTime: Long = 0L
 ) {
     val filteredChannels: List<Channel>
         get() {
@@ -58,12 +63,14 @@ data class TvUiState(
 class TvMundialViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefs = application.getSharedPreferences("tv_mundial_prefs", Context.MODE_PRIVATE)
+    private val epgRepository = EpgRepository(application)
 
     private val _uiState = MutableStateFlow(TvUiState())
     val uiState: StateFlow<TvUiState> = _uiState.asStateFlow()
 
     init {
         loadChannels()
+        syncEpg(force = false)
     }
 
     private fun loadChannels() {
@@ -75,15 +82,50 @@ class TvMundialViewModel(application: Application) : AndroidViewModel(applicatio
             it.copy(isFavorite = savedFavorites.contains(it.id))
         }
 
-        val initialChannel = channelsWithFavs.firstOrNull()
+        // Apply fast cached real EPG if available from previous runs
+        val channelsWithCachedEpg = epgRepository.applyCachedEpg(channelsWithFavs)
+        val initialChannel = channelsWithCachedEpg.firstOrNull()
 
         _uiState.value = TvUiState(
-            allChannels = channelsWithFavs,
+            allChannels = channelsWithCachedEpg,
             selectedChannel = initialChannel,
             selectedCountry = Country.PERU,
             favoriteIds = savedFavorites,
-            reminderIds = savedReminders
+            reminderIds = savedReminders,
+            lastEpgSyncTime = epgRepository.getLastSyncTimestamp()
         )
+    }
+
+    fun syncEpg(force: Boolean = false) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isEpgSyncing = true) }
+            try {
+                val currentChannels = _uiState.value.allChannels
+                val updatedChannels = epgRepository.syncEpg(currentChannels, force = force)
+
+                _uiState.update { current ->
+                    val selected = current.selectedChannel
+                    val updatedSelected = if (selected != null) {
+                        updatedChannels.find { it.id == selected.id } ?: selected
+                    } else null
+
+                    current.copy(
+                        allChannels = updatedChannels,
+                        selectedChannel = updatedSelected,
+                        isEpgSyncing = false,
+                        lastEpgSyncTime = System.currentTimeMillis(),
+                        snackbarMessage = if (force) "Guía EPG actualizada con programación oficial 📡" else current.snackbarMessage
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isEpgSyncing = false,
+                        snackbarMessage = if (force) "No se pudo actualizar la guía EPG: ${e.message}" else null
+                    )
+                }
+            }
+        }
     }
 
     fun selectChannel(channel: Channel) {

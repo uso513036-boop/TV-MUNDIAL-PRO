@@ -57,6 +57,9 @@ import com.example.model.Channel
 import com.example.model.ProgramItem
 import java.util.Calendar
 
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.CircularProgressIndicator
+
 @Composable
 fun EpgScheduleView(
     channel: Channel,
@@ -64,6 +67,8 @@ fun EpgScheduleView(
     onToggleFavorite: () -> Unit,
     onToggleReminder: (ProgramItem) -> Unit,
     remindersState: Set<String>,
+    onRefreshEpg: (() -> Unit)? = null,
+    isEpgSyncing: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     // Current simulated minute of day for live progress
@@ -195,27 +200,47 @@ fun EpgScheduleView(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Surface(
-                            color = Color(0xFFFF1744),
-                            shape = RoundedCornerShape(4.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            Surface(
+                                color = Color(0xFFFF1744),
+                                shape = RoundedCornerShape(4.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "EN EMISIÓN AHORA",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.White)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "EN EMISIÓN AHORA",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp
+                                    )
+                                }
+                            }
+
+                            if (currentProgram.isRealEpg || channel.isRealEpg) {
+                                Surface(
+                                    color = Color(0xFF00C853).copy(alpha = 0.25f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = "📡 GUÍA OFICIAL",
+                                        color = Color(0xFF69F0AE),
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                    )
+                                }
                             }
                         }
 

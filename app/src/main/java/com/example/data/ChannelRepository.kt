@@ -28,6 +28,7 @@ object ChannelRepository {
                 brandColorHex = 0xFFE53935,
                 description = "La señal televisiva del Estado peruano con contenidos de cultura, identidad nacional, educación y noticias.",
                 broadcastQuality = "FHD 1080p",
+                epgAliases = listOf("TVPeru.pe", "TV Perú", "Canal 7", "TVPERU", "Canal.7.pe", "TV Perú (Canal 7)", "TV Peru"),
                 schedule = listOf(
                     ProgramItem("pe_7_1", "Amanecer en el Perú", "Noticias del día, enlace con regiones y pronóstico del tiempo.", TvCategory.NOTICIAS, "06:00", "08:00", 360, 480, "TP", "Jennifer Cerecida"),
                     ProgramItem("pe_7_2", "GeoMundo & Cultura Viva", "Documentales sobre la biodiversidad, historia y maravillas del Perú profundo.", TvCategory.CULTURA, "08:00", "10:30", 480, 630, "TP", "Gonzalo Torres"),
@@ -55,6 +56,7 @@ object ChannelRepository {
                 brandColorHex = 0xFFB71C1C,
                 description = "Señal informativa continua 24 horas del Perú con despachos en vivo desde todas las provincias.",
                 broadcastQuality = "HD 720p",
+                epgAliases = listOf("TVPeruNoticias.pe", "TV Perú Noticias", "7.3", "TVPerú Noticias", "TV Peru Noticias"),
                 schedule = listOf(
                     ProgramItem("pe_73_1", "Primera Edición Noticias", "Resumen informativo matutino y estado del tráfico en Lima Metropolitana.", TvCategory.NOTICIAS, "05:00", "08:00", 300, 480, "TP"),
                     ProgramItem("pe_73_2", "Diálogos del Día", "Entrevistas en vivo con analistas económicos y líderes de opinión peruanos.", TvCategory.NOTICIAS, "08:00", "11:00", 480, 660, "+14"),
@@ -80,6 +82,7 @@ object ChannelRepository {
                 brandColorHex = 0xFFFFD600,
                 description = "El canal de noticias líder en radio y televisión del Perú con información minuto a minuto.",
                 broadcastQuality = "HD 1080p",
+                epgAliases = listOf("RPP.HD.(RPP.HD).pe", "RPP.TV.(RPP.TV).pe", "RPP.pe", "RPP", "RPP TV", "RPP Noticias"),
                 schedule = listOf(
                     ProgramItem("pe_rpp_1", "La Rotativa del Aire", "Información del tránsito, sucesos y entrevistas en vivo.", TvCategory.NOTICIAS, "06:00", "09:00", 360, 540, "TP"),
                     ProgramItem("pe_rpp_2", "Ampliación de Noticias", "La mesa de opinión política más influyente del país.", TvCategory.NOTICIAS, "09:00", "12:00", 540, 720, "+14"),
@@ -101,6 +104,7 @@ object ChannelRepository {
                 brandColorHex = 0xFF2E7D32,
                 description = "El primer canal educativo del Perú con clases y lecciones interactivas para primaria y secundaria.",
                 broadcastQuality = "HD 720p",
+                epgAliases = listOf("USMP.TV.(USMP.TV).pe", "USMP.pe", "USMP TV", "USMP", "USMPTV"),
                 schedule = listOf(
                     ProgramItem("pe_usmp_1", "Matemática Lúdica para Todos", "Lecciones dinámicas de álgebra y geometría para jóvenes estudiantes.", TvCategory.CULTURA, "07:00", "09:30", 420, 570, "TP"),
                     ProgramItem("pe_usmp_2", "Historia del Perú Ilustrada", "Recorrido por las culturas preincas, el Tawantinsuyo y la gesta libertadora.", TvCategory.CULTURA, "09:30", "12:00", 570, 720, "TP"),
@@ -125,6 +129,7 @@ object ChannelRepository {
                 brandColorHex = 0xFF00838F,
                 description = "Canal de noticias, política y análisis independiente con cobertura nacional.",
                 broadcastQuality = "FHD 1080p",
+                epgAliases = listOf("PBOTV.pe", "PBO TV", "PBO", "Willax", "WILLAX.(Willax).pe"),
                 schedule = listOf(
                     ProgramItem("pe_pbo_1", "PBO Noticias Matinal", "Noticias del día y entrevistas de coyuntura política.", TvCategory.NOTICIAS, "06:00", "09:00", 360, 540, "TP"),
                     ProgramItem("pe_pbo_2", "Tribuna Abierta", "Panel de discusión y participación de televidentes.", TvCategory.NOTICIAS, "09:00", "12:00", 540, 720, "+14"),
@@ -145,6 +150,7 @@ object ChannelRepository {
                 brandColorHex = 0xFFFF8F00,
                 description = "La señal televisiva del norte peruano con cobertura en Trujillo, Chiclayo, Piura y Chimbote.",
                 broadcastQuality = "HD 720p",
+                epgAliases = listOf("SolTV.pe", "Sol TV", "Sol TV Norte", "SolTV"),
                 schedule = listOf(
                     ProgramItem("pe_sol_1", "Sol TV Noticias Matinal", "Información de las provincias del norte del país.", TvCategory.NOTICIAS, "06:00", "09:00", 360, 540, "TP"),
                     ProgramItem("pe_sol_2", "Norte en Directo", "Reportajes sobre turismo y cultura costeña.", TvCategory.CULTURA, "09:00", "12:00", 540, 720, "TP"),
@@ -167,6 +173,7 @@ object ChannelRepository {
                 brandColorHex = 0xFF7C4DFF,
                 description = "Canal de entretenimiento, cultura pop, música y cine para el público joven.",
                 broadcastQuality = "HD 1080p",
+                epgAliases = listOf("TrivuTV.pe", "Trivu TV", "Trivu", "CANAL.J.(Canal.J).pe"),
                 schedule = listOf(
                     ProgramItem("pe_trv_1", "Despierta Trivu", "Videos musicales, tendencias en redes y entrevistas.", TvCategory.ENTRETENIMIENTO, "07:00", "10:00", 420, 600, "TP"),
                     ProgramItem("pe_trv_2", "Zona Gamer", "Análisis de videojuegos, esports y cultura tech.", TvCategory.ENTRETENIMIENTO, "10:00", "13:00", 600, 780, "TP"),
@@ -191,6 +198,7 @@ object ChannelRepository {
                 brandColorHex = 0xFFD81B60,
                 description = "Señal de Multimedios Costa Rica con noticias de última hora, entretenimiento, fútbol de primera división y programas de opinión.",
                 broadcastQuality = "HD 1080p",
+                epgAliases = listOf("Canal.Multimedios.(Costa.Rica).cr", "Canal8.cr", "Multimedios", "Canal 8", "Canal 8 Costa Rica"),
                 schedule = listOf(
                     ProgramItem("cr_8_1", "Telediario Al Minuto Costa Rica", "El primer noticiero matutino con la información del tránsito en el GAM.", TvCategory.NOTICIAS, "05:45", "08:30", 345, 510, "TP"),
                     ProgramItem("cr_8_2", "Divas pero Divinas", "Revista matutina de farándula, moda, psicología y cocina.", TvCategory.ENTRETENIMIENTO, "08:30", "11:30", 510, 690, "TP"),
@@ -214,6 +222,7 @@ object ChannelRepository {
                 brandColorHex = 0xFFFF5722,
                 description = "El canal del pueblo costarricense. Sucesos en vivo, denuncias ciudadanas, periodismo de impacto y voz comunitaria.",
                 broadcastQuality = "HD 720p",
+                epgAliases = listOf("Canal.Extra.TV.42.de.Costa.Rica.cr", "ExtraTV42.cr", "Extra TV 42", "Extra TV", "Canal 42"),
                 schedule = listOf(
                     ProgramItem("cr_x42_1", "Extra Noticias Amanecer", "Los sucesos de la madrugada y las denuncias de las comunidades ticas.", TvCategory.NOTICIAS, "06:00", "08:30", 360, 510, "+14"),
                     ProgramItem("cr_x42_2", "Voz del Pueblo en Vivo", "Línea abierta para que los televidentes expresen sus problemáticas locales.", TvCategory.NOTICIAS, "08:30", "11:30", 510, 690, "TP"),
@@ -236,6 +245,7 @@ object ChannelRepository {
                 brandColorHex = 0xFF7B1FA2,
                 description = "El canal de la música y la juventud de Costa Rica. Conciertos, estrenos mundiales, reggaeton, pop, rock y festivales.",
                 broadcastQuality = "HD 1080p",
+                epgAliases = listOf("VMLatino.cr", "VM Latino", "Canal 29", "VM Latino Costa Rica"),
                 schedule = listOf(
                     ProgramItem("cr_vm_1", "Despertar con Éxitos", "Los mejores videos de música urbana y pop latino para empezar el día con energía.", TvCategory.MUSICA, "06:00", "09:00", 360, 540, "TP"),
                     ProgramItem("cr_vm_2", "Los 10 Más Pedidos de Costa Rica", "El conteo oficial con los temas más votados por la audiencia tica.", TvCategory.MUSICA, "09:00", "12:00", 540, 720, "TP"),
@@ -260,6 +270,7 @@ object ChannelRepository {
                 brandColorHex = 0xFF0D47A1,
                 description = "Señal abierta costarricense con programación de entretenimiento, cultura, noticias y series.",
                 broadcastQuality = "HD 720p",
+                epgAliases = listOf("Canal.1.de.Costa.Rica.cr", "Canal1.cr", "Canal 1", "Canal 1 Costa Rica"),
                 schedule = listOf(
                     ProgramItem("cr_c1_1", "Amanecer Costarricense", "Magazine matutino con recetas, salud y entrevistas.", TvCategory.ENTRETENIMIENTO, "06:30", "09:00", 390, 540, "TP"),
                     ProgramItem("cr_c1_2", "Noticiero Central 1", "Información de las 7 provincias costarricenses.", TvCategory.NOTICIAS, "12:00", "14:00", 720, 840, "+14"),
@@ -282,6 +293,7 @@ object ChannelRepository {
                 brandColorHex = 0xFF0097A7,
                 description = "Voz y sentir del cantón de Pérez Zeledón y la Región Brunca de Costa Rica.",
                 broadcastQuality = "HD 720p",
+                epgAliases = listOf("Canal.14.de.Costa.Rica.cr", "Canal.13.de.Costa.Rica.cr", "TVSur.cr", "TV Sur", "Canal 14"),
                 schedule = listOf(
                     ProgramItem("cr_sur_1", "Amanecer Brunca", "Noticias rurales, agricultura y clima de Pérez Zeledón.", TvCategory.NOTICIAS, "06:00", "08:30", 360, 510, "TP"),
                     ProgramItem("cr_sur_2", "Tradición Sureña", "Historias de los pioneros y vida comunitaria.", TvCategory.CULTURA, "08:30", "11:30", 510, 690, "TP"),
@@ -301,6 +313,7 @@ object ChannelRepository {
                 brandColorHex = 0xFF388E3C,
                 description = "Canal agropecuario con cobertura de tecnología agrícola, ganadería y ecología de Centroamérica.",
                 broadcastQuality = "HD 720p",
+                epgAliases = listOf("Canal.Agrotendencia.TV.cr", "AgrotendenciaTV.cr", "Agrotendencia TV", "Agrotendencia"),
                 schedule = listOf(
                     ProgramItem("cr_agro_1", "El Campo Hoy", "Informes técnicos de agronomía y cosechas sostenibles.", TvCategory.CULTURA, "06:00", "09:00", 360, 540, "TP"),
                     ProgramItem("cr_agro_2", "Ganadería Moderna", "Técnicas de producción ganadera y sanidad animal.", TvCategory.CULTURA, "09:00", "12:00", 540, 720, "TP"),

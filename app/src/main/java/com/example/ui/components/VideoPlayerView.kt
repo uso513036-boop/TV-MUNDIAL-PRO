@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.VolumeMute
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
@@ -41,6 +42,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -69,6 +71,7 @@ import com.example.model.Channel
 import com.example.player.TvPlayerManager
 import com.example.player.VideoPlaybackState
 import kotlinx.coroutines.delay
+import java.util.Calendar
 import kotlin.math.abs
 
 @OptIn(UnstableApi::class)
@@ -81,6 +84,8 @@ fun VideoPlayerView(
     onToggleFullscreen: () -> Unit,
     onNextChannel: () -> Unit,
     onPreviousChannel: () -> Unit,
+    onRefreshEpg: (() -> Unit)? = null,
+    isEpgSyncing: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -91,10 +96,32 @@ fun VideoPlayerView(
     var showControls by remember { mutableStateOf(true) }
     var showFullscreenSwipeHint by remember { mutableStateOf(false) }
 
-    // Ocultar controles automáticamente tras 3.5 segundos de inactividad
+    // Re-evaluar programa en emisión periódicamente
+    var currentTimeMinutes by remember {
+        val cal = Calendar.getInstance()
+        mutableStateOf(cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE))
+    }
+
+    LaunchedEffect(channel.id) {
+        while (true) {
+            val cal = Calendar.getInstance()
+            currentTimeMinutes = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+            delay(30_000)
+        }
+    }
+
+    val currentProgram = remember(channel, currentTimeMinutes) {
+        channel.getCurrentProgram(currentTimeMinutes)
+    }
+
+    val nextProgram = remember(channel, currentTimeMinutes) {
+        channel.getNextProgram(currentTimeMinutes)
+    }
+
+    // Ocultar controles automáticamente tras 4.5 segundos de inactividad
     LaunchedEffect(showControls, channel.id) {
         if (showControls) {
-            delay(3500)
+            delay(4500)
             showControls = false
         }
     }
@@ -317,6 +344,30 @@ fun VideoPlayerView(
                             )
                         }
 
+                        if (onRefreshEpg != null) {
+                            IconButton(
+                                onClick = onRefreshEpg,
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .testTag("player_refresh_epg_button")
+                            ) {
+                                if (isEpgSyncing) {
+                                    CircularProgressIndicator(
+                                        color = Color(0xFF00E5FF),
+                                        strokeWidth = 2.dp,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Sync,
+                                        contentDescription = "Actualizar EPG",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+
                         IconButton(
                             onClick = { playerManager.toggleMute() },
                             modifier = Modifier
@@ -342,6 +393,134 @@ fun VideoPlayerView(
                                 contentDescription = if (isFullscreen) "Salir de pantalla completa" else "Pantalla completa",
                                 tint = Color(0xFF00E5FF),
                                 modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Bottom Overlay: Guía EPG ("Estás viendo" + "Siguiente" + Horarios oficiales)
+                Surface(
+                    color = Color.Black.copy(alpha = if (isFullscreen) 0.85f else 0.88f),
+                    shape = RoundedCornerShape(if (isFullscreen) 14.dp else 10.dp),
+                    border = BorderStroke(1.dp, Color(0xFF00E5FF).copy(alpha = 0.4f)),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = if (isFullscreen) 24.dp else 8.dp,
+                            vertical = if (isFullscreen) 16.dp else 6.dp
+                        )
+                        .testTag("player_epg_overlay")
+                ) {
+                    Column(
+                        modifier = Modifier.padding(
+                            horizontal = if (isFullscreen) 16.dp else 10.dp,
+                            vertical = if (isFullscreen) 10.dp else 6.dp
+                        )
+                    ) {
+                        // Fila 1: 📺 "Estás viendo:" + Nombre del programa + ⏰ Horario de inicio y fin
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f, fill = false)
+                            ) {
+                                Text(
+                                    text = "📺 Estás viendo: ",
+                                    color = Color(0xFF00E5FF),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = if (isFullscreen) 13.5.sp else 11.sp
+                                )
+                                Text(
+                                    text = currentProgram?.title ?: channel.name,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = if (isFullscreen) 14.sp else 11.5.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+
+                            // ⏰ Horario de inicio y fin + Badge EPG
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                if (currentProgram != null && currentProgram.startTime.isNotBlank()) {
+                                    Surface(
+                                        color = Color.White.copy(alpha = 0.12f),
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            text = "⏰ ${currentProgram.startTime} - ${currentProgram.endTime}",
+                                            color = Color(0xFFFFD54F),
+                                            fontSize = if (isFullscreen) 12.sp else 9.5.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+
+                                if (currentProgram?.isRealEpg == true || channel.isRealEpg) {
+                                    Surface(
+                                        color = Color(0xFF00C853).copy(alpha = 0.25f),
+                                        border = BorderStroke(0.5.dp, Color(0xFF00C853)),
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            text = "📡 GUÍA OFICIAL",
+                                            color = Color(0xFF69F0AE),
+                                            fontSize = if (isFullscreen) 10.sp else 8.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Barra de progreso del programa actual
+                        if (currentProgram != null) {
+                            val progress = currentProgram.getProgressPercent(currentTimeMinutes)
+                            Spacer(modifier = Modifier.height(if (isFullscreen) 6.dp else 4.dp))
+                            LinearProgressIndicator(
+                                progress = { progress },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(if (isFullscreen) 3.5.dp else 2.5.dp)
+                                    .clip(RoundedCornerShape(2.dp)),
+                                color = Color(0xFF00E5FF),
+                                trackColor = Color.White.copy(alpha = 0.18f),
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(if (isFullscreen) 6.dp else 4.dp))
+
+                        // Fila 2: ⏭️ "Siguiente:" → Nombre del próximo programa + hora de inicio
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "⏭️ Siguiente: ",
+                                color = Color(0xFFFFB74D),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = if (isFullscreen) 12.5.sp else 10.sp
+                            )
+                            Text(
+                                text = if (nextProgram != null) {
+                                    "${nextProgram.title} (${nextProgram.startTime})"
+                                } else {
+                                    "Continuación de programación regular"
+                                },
+                                color = Color(0xFFE2E8F0),
+                                fontSize = if (isFullscreen) 12.5.sp else 10.sp,
+                                fontWeight = FontWeight.Normal,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }

@@ -177,6 +177,8 @@ fun TvMundialApp(
                 onToggleFullscreen = { viewModel.toggleFullscreen() },
                 onNextChannel = { viewModel.selectNextChannel() },
                 onPreviousChannel = { viewModel.selectPreviousChannel() },
+                onRefreshEpg = { viewModel.syncEpg(force = true) },
+                isEpgSyncing = uiState.isEpgSyncing,
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -415,6 +417,8 @@ fun TvMundialApp(
                     onToggleFullscreen = { viewModel.toggleFullscreen() },
                     onNextChannel = { viewModel.selectNextChannel() },
                     onPreviousChannel = { viewModel.selectPreviousChannel() },
+                    onRefreshEpg = { viewModel.syncEpg(force = true) },
+                    isEpgSyncing = uiState.isEpgSyncing,
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(16f / 9f)
@@ -460,6 +464,8 @@ fun TvMundialApp(
                                 viewModel.toggleReminder(program, uiState.selectedChannel!!.name)
                             },
                             remindersState = uiState.reminderIds,
+                            onRefreshEpg = { viewModel.syncEpg(force = true) },
+                            isEpgSyncing = uiState.isEpgSyncing,
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {

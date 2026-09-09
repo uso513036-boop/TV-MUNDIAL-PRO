@@ -1,6 +1,6 @@
 {
   "name": "TV MUNDIAL PRO",
-  "description": "App de TV en streaming en vivo para Perú y Costa Rica con reproductor integrado y guía de programación (EPG) personalizada por región.",
+  "description": "App de TV en streaming en vivo para Perú y Costa Rica con guía de programación oficial (EPG) en vivo sobre el reproductor en pantalla normal y completa.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
