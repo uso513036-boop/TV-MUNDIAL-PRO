@@ -36,7 +36,7 @@ class EpgRepository(private val context: Context) {
         .followRedirects(true)
         .build()
 
-    private val cacheFileName = "real_epg_cache_v4.json"
+    private val cacheFileName = "real_epg_cache_v5.json"
     private val prefs = context.getSharedPreferences("epg_repo_prefs", Context.MODE_PRIVATE)
 
     companion object {
@@ -764,13 +764,14 @@ class EpgRepository(private val context: Context) {
         val allItems = mutableListOf<ProgramItem>()
 
         val weekdaySlots = listOf(
+            ProgramSlot(0, 0, 6, 0, "Transmisión Nocturna y Música", "Programación continua nocturna con música variada y retransmisiones de programas destacados.", TvCategory.MUSICA),
             ProgramSlot(6, 0, 7, 0, "Caminos de Fe", "Reflexiones matutinas de fe, oración y valores para iniciar el día.", TvCategory.CULTURA),
             ProgramSlot(7, 0, 7, 30, "Santo Rosario", "Rezo del Santo Rosario en vivo desde la Catedral San Isidro de El General.", TvCategory.CULTURA),
             ProgramSlot(7, 30, 8, 30, "Santa Misa en Vivo", "Transmisión de la Santa Eucaristía diaria desde la Parroquia de San Isidro Labrador.", TvCategory.CULTURA),
             ProgramSlot(8, 30, 9, 30, "Videos Cristianos y Alabanzas", "Música de alabanza y mensajes de motivación comunitaria para la Zona Sur.", TvCategory.CULTURA),
             ProgramSlot(9, 30, 11, 0, "Complacencias y Música", "Espacio interactivo de música popular y saludos para los televidentes de la Región Brunca.", TvCategory.MUSICA),
             ProgramSlot(11, 0, 11, 5, "Avances Informativos", "Primer avance informativo con noticias de última hora de Pérez Zeledón y la región.", TvCategory.NOTICIAS),
-            ProgramSlot(11, 5, 12, 0, "Economía y Sociedad / Una Mirada", "Análisis del desarrollo socioeconómico de la zona sur de Costa Rica.", TvCategory.CULTURA),
+            ProgramSlot(11, 5, 12, 0, "Tras Las Huellas de La Historia", "Programa insignia de rescate histórico y memoria cultural de los pioneros de Pérez Zeledón.", TvCategory.CULTURA),
             ProgramSlot(12, 0, 12, 30, "Tv Sur Noticias Edición Mediodía en vivo", "Noticiero meridiano en vivo: sucesos, comunidad y actualidad regional de Pérez Zeledón.", TvCategory.NOTICIAS, "Carmen Picado y equipo"),
             ProgramSlot(12, 30, 13, 0, "ConCiencia", "Espacio educativo de ciencia, tecnología, agricultura y medio ambiente en Pérez Zeledón.", TvCategory.CULTURA),
             ProgramSlot(13, 0, 14, 0, "Videos Musicales", "Lo mejor de la música latina, baladas y ritmos del momento.", TvCategory.MUSICA),
@@ -784,15 +785,16 @@ class EpgRepository(private val context: Context) {
             ProgramSlot(20, 0, 21, 0, "Acontecer Regional y Especiales", "Entrevistas comunitarias, proyectos de municipalidades y vida en los cantones del sur.", TvCategory.CULTURA),
             ProgramSlot(21, 0, 21, 30, "Tv Sur Noticias Edición Nocturna", "Resumen de las informaciones más importantes del día en Pérez Zeledón y la zona sur.", TvCategory.NOTICIAS),
             ProgramSlot(21, 30, 23, 0, "Documentales y Cultura Generaleña", "Reportajes especiales de tradiciones, agricultura y arte del Valle de El General.", TvCategory.CULTURA),
-            ProgramSlot(23, 0, 6, 0, "Transmisión Musical y Repeticiones", "Programación continua nocturna con música variada y retransmisiones de programas.", TvCategory.MUSICA)
+            ProgramSlot(23, 0, 0, 0, "Transmisión Nocturna y Música", "Programación continua nocturna con música variada y retransmisiones de programas destacados.", TvCategory.MUSICA)
         )
 
         val weekendSlots = listOf(
+            ProgramSlot(0, 0, 6, 0, "Transmisión Musical Nocturna", "Selección musical nocturna de fin de semana y retransmisiones.", TvCategory.MUSICA),
             ProgramSlot(6, 0, 7, 0, "Caminos de Fe", "Oración matutina y reflexiones de fe para iniciar el fin de semana.", TvCategory.CULTURA),
             ProgramSlot(7, 0, 8, 0, "Santa Misa de Fin de Semana", "Eucaristía solemne desde la Catedral San Isidro del General en Pérez Zeledón.", TvCategory.CULTURA),
             ProgramSlot(8, 0, 9, 30, "Santo Rosario y Videos Cristianos", "Rezo del Santo Rosario y cantos de alabanza.", TvCategory.CULTURA),
             ProgramSlot(9, 30, 11, 0, "Complacencias y Música Popular", "Música y saludos pedidos por las comunidades de la Región Brunca.", TvCategory.MUSICA),
-            ProgramSlot(11, 0, 12, 0, "Una Mirada Regional", "Crónicas y reportajes sobre personajes ilustres de Pérez Zeledón y cantones del sur.", TvCategory.CULTURA),
+            ProgramSlot(11, 0, 12, 0, "Tras Las Huellas de La Historia", "Crónicas y reportajes sobre personajes ilustres de Pérez Zeledón y cantones del sur.", TvCategory.CULTURA),
             ProgramSlot(12, 0, 13, 0, "Tv Sur Noticias: Resumen Semanal", "Recuento completo de los sucesos y noticias más impactantes de la semana.", TvCategory.NOTICIAS),
             ProgramSlot(13, 0, 14, 30, "Videos Musicales y Tradición Tica", "Espacio dedicado a la identidad costarricense y la música autóctona.", TvCategory.MUSICA),
             ProgramSlot(14, 30, 16, 0, "Documentales de la Zona Sur y Brunca", "Riqueza biológica de Chirripó, Osa, Coto Brus, Buenos Aires y Golfito.", TvCategory.CULTURA),
@@ -801,7 +803,7 @@ class EpgRepository(private val context: Context) {
             ProgramSlot(18, 0, 19, 30, "Tv Sur Deportes Especial", "Transmisiones y resúmenes de los campeonatos deportivos de Pérez Zeledón.", TvCategory.DEPORTES),
             ProgramSlot(19, 30, 21, 0, "Especiales Comunitarios de Pérez Zeledón", "Festivales cantonales, ferias y fiestas patronales de la Región Brunca.", TvCategory.CULTURA),
             ProgramSlot(21, 0, 22, 30, "Documentales y Clásicos Regionales", "Archivos históricos de Pérez Zeledón y la Región Brunca.", TvCategory.CULTURA),
-            ProgramSlot(22, 30, 6, 0, "Transmisión Musical Nocturna", "Selección musical nocturna de fin de semana.", TvCategory.MUSICA)
+            ProgramSlot(22, 30, 0, 0, "Transmisión Musical Nocturna", "Selección musical nocturna de fin de semana.", TvCategory.MUSICA)
         )
 
         for (offset in 0..1) {

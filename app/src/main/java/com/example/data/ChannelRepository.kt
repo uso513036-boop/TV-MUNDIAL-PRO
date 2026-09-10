@@ -206,16 +206,15 @@ object ChannelRepository {
                 shortName = "TV Sur",
                 country = Country.COSTA_RICA,
                 category = TvCategory.CULTURA,
-                streamUrl = "http://tv.ticosmedia.com:1935/TVSUR/TVSUR/playlist.m3u8",
+                streamUrl = "https://k20.usastreams.com:8081/tvsur/index.m3u8",
                 backupStreamUrls = listOf(
-                    "https://k20.usastreams.com:8081/tvsur/tracks-v1a1/mono.ts.m3u8",
-                    "http://tvn.obix.tv:1935/TVN/CH14.stream_720p/playlist.m3u8"
+                    "https://k20.usastreams.com:8081/tvsur/tracks-v1a1/mono.ts.m3u8"
                 ),
                 logoText = "S14",
                 brandColorHex = 0xFF0097A7,
                 description = "Voz y sentir del cantón de Pérez Zeledón y la Región Brunca de Costa Rica.",
-                broadcastQuality = "HD 720p",
-                epgAliases = listOf("TVSurCanal14.cr", "Canal.14.de.Costa.Rica.cr", "TVSur.cr", "TV Sur", "Canal 14")
+                broadcastQuality = "HD 1080p",
+                epgAliases = listOf("TVSurCanal14.cr", "TVSur.cr", "TV Sur", "Canal 14")
             ),
             Channel(
                 id = "cr_agrotendencia",
