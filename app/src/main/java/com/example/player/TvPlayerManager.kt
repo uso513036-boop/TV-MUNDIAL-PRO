@@ -58,9 +58,10 @@ class TvPlayerManager(context: Context) {
 
             val httpDataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent("Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
-                .setConnectTimeoutMs(10000)
-                .setReadTimeoutMs(15000)
+                .setConnectTimeoutMs(8000)
+                .setReadTimeoutMs(12000)
                 .setAllowCrossProtocolRedirects(true)
+                .setKeepPostFor302Redirects(true)
 
             val mediaSourceFactory = DefaultMediaSourceFactory(httpDataSourceFactory)
 

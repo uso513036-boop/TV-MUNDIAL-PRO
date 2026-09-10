@@ -208,18 +208,20 @@ fun VideoPlayerView(
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
                     useController = false
+                    setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
                     player = playerManager.getPlayer()
                     resizeMode = playbackState.resizeMode
                 }
             },
             update = { playerView ->
-                if (playerView.player != playerManager.getPlayer()) {
-                    playerView.player = playerManager.getPlayer()
+                val activePlayer = playerManager.getPlayer()
+                if (playerView.player !== activePlayer) {
+                    playerView.player = activePlayer
                 }
                 playerView.resizeMode = playbackState.resizeMode
             },
-            onRelease = { playerView ->
-                playerView.player = null
+            onRelease = { _ ->
+                // Do not nullify player here to prevent detaching the video surface when toggling fullscreen
             },
             modifier = Modifier.fillMaxSize()
         )

@@ -72,12 +72,16 @@ object ChannelRepository {
                 shortName = "USMP TV",
                 country = Country.PERU,
                 category = TvCategory.CULTURA,
-                streamUrl = "https://streamusmptv.ddns.net/live/stream.m3u8",
-                backupStreamUrls = emptyList(),
+                streamUrl = "http://190.93.224.42/USMP/index.m3u8",
+                backupStreamUrls = listOf(
+                    "http://187.102.210.46/USMP/index.m3u8",
+                    "https://streamusmptv.ddns.net/live/stream.m3u8",
+                    "https://live-evg11.tv360.bitel.com.pe/bitel/usmp/playlist.m3u8"
+                ),
                 logoText = "USMP",
                 brandColorHex = 0xFF2E7D32,
                 description = "El primer canal educativo del Perú con clases y lecciones interactivas para primaria y secundaria.",
-                broadcastQuality = "HD 720p",
+                broadcastQuality = "FHD 1080p",
                 epgAliases = listOf("USMP.TV.(USMP.TV).pe", "USMP.pe", "USMP TV", "USMP", "USMPTV")
             ),
             Channel(
@@ -211,7 +215,7 @@ object ChannelRepository {
                 brandColorHex = 0xFF0097A7,
                 description = "Voz y sentir del cantón de Pérez Zeledón y la Región Brunca de Costa Rica.",
                 broadcastQuality = "HD 720p",
-                epgAliases = listOf("Canal.13.de.Costa.Rica.cr", "Canal.14.de.Costa.Rica.cr", "TVSur.cr", "TV Sur", "Canal 14")
+                epgAliases = listOf("TVSurCanal14.cr", "Canal.14.de.Costa.Rica.cr", "TVSur.cr", "TV Sur", "Canal 14")
             ),
             Channel(
                 id = "cr_agrotendencia",
