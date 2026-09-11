@@ -348,7 +348,8 @@ fun VideoPlayerView(
                             )
                         }
 
-                        if (onRefreshEpg != null) {
+                        // Actualización de EPG disponible en pantalla completa
+                        if (isFullscreen && onRefreshEpg != null) {
                             IconButton(
                                 onClick = onRefreshEpg,
                                 modifier = Modifier
@@ -402,131 +403,133 @@ fun VideoPlayerView(
                     }
                 }
 
-                // Bottom Overlay: Guía EPG ("Estás viendo" + "Siguiente" + Horarios oficiales)
-                Surface(
-                    color = Color.Black.copy(alpha = if (isFullscreen) 0.85f else 0.88f),
-                    shape = RoundedCornerShape(if (isFullscreen) 14.dp else 10.dp),
-                    border = BorderStroke(1.dp, Color(0xFF00E5FF).copy(alpha = 0.4f)),
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(
-                            horizontal = if (isFullscreen) 24.dp else 8.dp,
-                            vertical = if (isFullscreen) 16.dp else 6.dp
-                        )
-                        .testTag("player_epg_overlay")
-                ) {
-                    Column(
-                        modifier = Modifier.padding(
-                            horizontal = if (isFullscreen) 16.dp else 10.dp,
-                            vertical = if (isFullscreen) 10.dp else 6.dp
-                        )
+                // Bottom Overlay: Guía EPG ("Estás viendo" + "Siguiente" + Horarios oficiales) - MOSTRAR EXCLUSIVAMENTE EN PANTALLA COMPLETA
+                if (isFullscreen) {
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.85f),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, Color(0xFF00E5FF).copy(alpha = 0.4f)),
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = 24.dp,
+                                vertical = 16.dp
+                            )
+                            .testTag("player_epg_overlay")
                     ) {
-                        val hasRealCurrent = channel.isRealEpg && currentProgram != null
-                        val hasRealNext = channel.isRealEpg && nextProgram != null
-
-                        // Fila 1: 📺 "Estás viendo:" + Nombre del programa + ⏰ Horario de inicio y fin
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                        Column(
+                            modifier = Modifier.padding(
+                                horizontal = 16.dp,
+                                vertical = 10.dp
+                            )
                         ) {
+                            val hasRealCurrent = channel.isRealEpg && currentProgram != null
+                            val hasRealNext = channel.isRealEpg && nextProgram != null
+
+                            // Fila 1: 📺 "Estás viendo:" + Nombre del programa + ⏰ Horario de inicio y fin
                             Row(
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f, fill = false)
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                ) {
+                                    Text(
+                                        text = "📺 Estás viendo: ",
+                                        color = Color(0xFF00E5FF),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.5.sp
+                                    )
+                                    Text(
+                                        text = if (hasRealCurrent) currentProgram!!.title else "Programación no disponible",
+                                        color = if (hasRealCurrent) Color.White else Color(0xFF94A3B8),
+                                        fontWeight = if (hasRealCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                                        fontSize = 14.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                                // ⏰ Horario de inicio y fin + Badge EPG (Solo si es programación real)
+                                if (hasRealCurrent && currentProgram!!.startTime.isNotBlank()) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Surface(
+                                            color = Color.White.copy(alpha = 0.12f),
+                                            shape = RoundedCornerShape(4.dp)
+                                        ) {
+                                            Text(
+                                                text = "⏰ ${currentProgram.startTime} - ${currentProgram.endTime}",
+                                                color = Color(0xFFFFD54F),
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+
+                                        Surface(
+                                            color = Color(0xFF00C853).copy(alpha = 0.25f),
+                                            border = BorderStroke(0.5.dp, Color(0xFF00C853)),
+                                            shape = RoundedCornerShape(4.dp)
+                                        ) {
+                                            Text(
+                                                text = "📡 GUÍA OFICIAL",
+                                                color = Color(0xFF69F0AE),
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Barra de progreso del programa actual (Solo con datos reales)
+                            if (hasRealCurrent) {
+                                val progress = currentProgram!!.getProgressPercent(currentTimeMinutes, currentEpochMs)
+                                Spacer(modifier = Modifier.height(6.dp))
+                                LinearProgressIndicator(
+                                    progress = { progress },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(3.5.dp)
+                                        .clip(RoundedCornerShape(2.dp)),
+                                    color = Color(0xFF00E5FF),
+                                    trackColor = Color.White.copy(alpha = 0.18f),
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Fila 2: ⏭️ "Siguiente:" → Nombre del próximo programa + hora de inicio
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "📺 Estás viendo: ",
-                                    color = Color(0xFF00E5FF),
+                                    text = "⏭️ Siguiente: ",
+                                    color = Color(0xFFFFB74D),
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = if (isFullscreen) 13.5.sp else 11.sp
+                                    fontSize = 12.5.sp
                                 )
                                 Text(
-                                    text = if (hasRealCurrent) currentProgram!!.title else "Programación no disponible",
-                                    color = if (hasRealCurrent) Color.White else Color(0xFF94A3B8),
-                                    fontWeight = if (hasRealCurrent) FontWeight.SemiBold else FontWeight.Normal,
-                                    fontSize = if (isFullscreen) 14.sp else 11.5.sp,
+                                    text = if (hasRealNext) {
+                                        "${nextProgram!!.title} (${nextProgram.startTime})"
+                                    } else {
+                                        "Programación no disponible"
+                                    },
+                                    color = if (hasRealNext) Color(0xFFE2E8F0) else Color(0xFF94A3B8),
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.Normal,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
-
-                            // ⏰ Horario de inicio y fin + Badge EPG (Solo si es programación real)
-                            if (hasRealCurrent && currentProgram!!.startTime.isNotBlank()) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Surface(
-                                        color = Color.White.copy(alpha = 0.12f),
-                                        shape = RoundedCornerShape(4.dp)
-                                    ) {
-                                        Text(
-                                            text = "⏰ ${currentProgram.startTime} - ${currentProgram.endTime}",
-                                            color = Color(0xFFFFD54F),
-                                            fontSize = if (isFullscreen) 12.sp else 9.5.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
-
-                                    Surface(
-                                        color = Color(0xFF00C853).copy(alpha = 0.25f),
-                                        border = BorderStroke(0.5.dp, Color(0xFF00C853)),
-                                        shape = RoundedCornerShape(4.dp)
-                                    ) {
-                                        Text(
-                                            text = "📡 GUÍA OFICIAL",
-                                            color = Color(0xFF69F0AE),
-                                            fontSize = if (isFullscreen) 10.sp else 8.5.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // Barra de progreso del programa actual (Solo con datos reales)
-                        if (hasRealCurrent) {
-                            val progress = currentProgram!!.getProgressPercent(currentTimeMinutes, currentEpochMs)
-                            Spacer(modifier = Modifier.height(if (isFullscreen) 6.dp else 4.dp))
-                            LinearProgressIndicator(
-                                progress = { progress },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(if (isFullscreen) 3.5.dp else 2.5.dp)
-                                    .clip(RoundedCornerShape(2.dp)),
-                                color = Color(0xFF00E5FF),
-                                trackColor = Color.White.copy(alpha = 0.18f),
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(if (isFullscreen) 6.dp else 4.dp))
-
-                        // Fila 2: ⏭️ "Siguiente:" → Nombre del próximo programa + hora de inicio
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "⏭️ Siguiente: ",
-                                color = Color(0xFFFFB74D),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = if (isFullscreen) 12.5.sp else 10.sp
-                            )
-                            Text(
-                                text = if (hasRealNext) {
-                                    "${nextProgram!!.title} (${nextProgram.startTime})"
-                                } else {
-                                    "Programación no disponible"
-                                },
-                                color = if (hasRealNext) Color(0xFFE2E8F0) else Color(0xFF94A3B8),
-                                fontSize = if (isFullscreen) 12.5.sp else 10.sp,
-                                fontWeight = FontWeight.Normal,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
                         }
                     }
                 }

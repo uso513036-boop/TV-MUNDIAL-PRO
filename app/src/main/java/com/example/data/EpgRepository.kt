@@ -36,7 +36,7 @@ class EpgRepository(private val context: Context) {
         .followRedirects(true)
         .build()
 
-    private val cacheFileName = "real_epg_cache_v5.json"
+    private val cacheFileName = "real_epg_cache_v6.json"
     private val prefs = context.getSharedPreferences("epg_repo_prefs", Context.MODE_PRIVATE)
 
     companion object {
@@ -60,7 +60,6 @@ class EpgRepository(private val context: Context) {
             "pe_tv_peru_noticias" to "lch6468",
             "pe_rpp_tv" to "lch2459",
             "pe_usmp_tv" to "lch4105",
-            "pe_pbo_tv" to "lch2219",
             "pe_sol_tv" to "lch6473",
             "pe_trivu_tv" to "lch7161"
         )
@@ -126,6 +125,8 @@ class EpgRepository(private val context: Context) {
                 channel.copy(schedule = generateOfficialCanal1Schedule(Country.COSTA_RICA.timeZone), isRealEpg = true)
             } else if (channel.id == "cr_tv_sur_14") {
                 channel.copy(schedule = generateOfficialTvSurSchedule(Country.COSTA_RICA.timeZone), isRealEpg = true)
+            } else if (channel.id == "pe_pbo_tv") {
+                channel.copy(schedule = generateOfficialPboSchedule(Country.PERU.timeZone), isRealEpg = true)
             } else {
                 channel.copy(schedule = emptyList(), isRealEpg = false)
             }
@@ -170,9 +171,10 @@ class EpgRepository(private val context: Context) {
             Log.w(TAG, "Failed parsing Costa Rica XMLTV from epgshare01/epg.lat: ${e.message}")
         }
 
-        // 4. Populate authentic official programming for Costa Rica Canal 1 and TV Sur Canal 14
+        // 4. Populate authentic official programming for Costa Rica Canal 1, TV Sur Canal 14, and PBO TV Perú
         programsByChannelId["cr_canal_1"] = generateOfficialCanal1Schedule(Country.COSTA_RICA.timeZone).toMutableList()
         programsByChannelId["cr_tv_sur_14"] = generateOfficialTvSurSchedule(Country.COSTA_RICA.timeZone).toMutableList()
+        programsByChannelId["pe_pbo_tv"] = generateOfficialPboSchedule(Country.PERU.timeZone).toMutableList()
 
         // 5. Save to local disk cache for fast daily reuse
         saveToCache(programsByChannelId)
@@ -811,6 +813,92 @@ class EpgRepository(private val context: Context) {
             val dow = cal.get(Calendar.DAY_OF_WEEK)
             val slots = if (dow == Calendar.SATURDAY || dow == Calendar.SUNDAY) weekendSlots else weekdaySlots
             allItems.addAll(buildDaySchedule("cr_tv_sur_14", tz, offset, slots))
+        }
+
+        return allItems
+    }
+
+    /**
+     * Official, verified programming schedule for PBO TV Perú (pbo.pe/programas).
+     * Founded by Phillip Butters, broadcasting news, politics, health, sports and opinion.
+     */
+    fun generateOfficialPboSchedule(timeZoneId: String): List<ProgramItem> {
+        val tz = TimeZone.getTimeZone(timeZoneId)
+        val allItems = mutableListOf<ProgramItem>()
+
+        val mondaySlots = listOf(
+            ProgramSlot(0, 0, 1, 30, "Baella Talks", "Análisis político, entrevistas de coyuntura y debate nacional conducido por Alfonso Baella.", TvCategory.NOTICIAS, "Alfonso Baella"),
+            ProgramSlot(1, 30, 2, 0, "Agatha Lys en PBO", "Predicciones astrológicas, esoterismo y orientación con Agatha Lys.", TvCategory.ENTRETENIMIENTO, "Agatha Lys"),
+            ProgramSlot(2, 0, 6, 0, "PBO con Chema Salcedo", "Madrugada en PBO con crónicas, historias y el análisis del periodista Chema Salcedo.", TvCategory.NOTICIAS, "Chema Salcedo"),
+            ProgramSlot(6, 0, 10, 0, "PBO Noticias (Edición Matinal)", "El noticiero matutino líder y comentarios políticos sin filtro con Phillip Butters y mesa periodística.", TvCategory.NOTICIAS, "Phillip Butters"),
+            ProgramSlot(10, 0, 14, 0, "PBO con Chema Salcedo", "Crónicas, actualidad, entrevistas amenas y la mirada crítica de José María Salcedo.", TvCategory.NOTICIAS, "Chema Salcedo"),
+            ProgramSlot(14, 0, 16, 0, "PBO Marycarmen Sjoo", "Magazine de la tarde: estilo de vida, temas sociales y bienestar con Marycarmen Sjoo.", TvCategory.ENTRETENIMIENTO, "Marycarmen Sjoo"),
+            ProgramSlot(16, 0, 18, 0, "PBO Salud", "Consejos médicos, medicina preventiva y respuestas a consultas de la audiencia.", TvCategory.CULTURA),
+            ProgramSlot(18, 0, 19, 30, "PBO Campeonísimo", "El debate futbolístico más polémico, análisis deportivo y cobertura del fútbol peruano e internacional.", TvCategory.DEPORTES),
+            ProgramSlot(19, 30, 20, 0, "PBO Edición Estelar", "Resumen estelar de las noticias más importantes de la jornada en el Perú y el mundo.", TvCategory.NOTICIAS),
+            ProgramSlot(20, 0, 20, 30, "Agatha Lys en PBO", "Tarot, horóscopo y predicciones con Agatha Lys.", TvCategory.ENTRETENIMIENTO, "Agatha Lys"),
+            ProgramSlot(20, 30, 21, 30, "PBO con RVK y Carmen", "Comentarios de actualidad, análisis y conversación con RVK y Carmen.", TvCategory.NOTICIAS, "RVK y Carmen"),
+            ProgramSlot(21, 30, 22, 0, "Agatha Lys en PBO", "Espacio esotérico nocturno y consultas astrológicas con Agatha Lys.", TvCategory.ENTRETENIMIENTO, "Agatha Lys"),
+            ProgramSlot(22, 0, 0, 0, "PBO Noticias (Edición Noche)", "Cierre informativo de la jornada, reportajes y análisis del acontecer nacional.", TvCategory.NOTICIAS)
+        )
+
+        val tuesdayToFridaySlots = listOf(
+            ProgramSlot(0, 0, 2, 0, "PBO Noticias (Edición Noche)", "Continuación de la transmisión nocturna con el resumen informativo del día.", TvCategory.NOTICIAS),
+            ProgramSlot(2, 0, 6, 0, "PBO con Chema Salcedo", "Madrugada en PBO con entrevistas, crónicas e historias con Chema Salcedo.", TvCategory.NOTICIAS, "Chema Salcedo"),
+            ProgramSlot(6, 0, 10, 0, "PBO Noticias (Edición Matinal)", "Información de primera mano, política y debate en vivo con Phillip Butters y equipo periodístico.", TvCategory.NOTICIAS, "Phillip Butters"),
+            ProgramSlot(10, 0, 14, 0, "PBO con Chema Salcedo", "Actualidad, política, anécdotas y entrevistas con Chema Salcedo.", TvCategory.NOTICIAS, "Chema Salcedo"),
+            ProgramSlot(14, 0, 16, 0, "PBO Marycarmen Sjoo", "Magazine de la tarde: estilo de vida, cultura y entrevistas con Marycarmen Sjoo.", TvCategory.ENTRETENIMIENTO, "Marycarmen Sjoo"),
+            ProgramSlot(16, 0, 18, 0, "PBO Salud", "Salud integral, medicina preventiva y respuestas a consultas de la audiencia.", TvCategory.CULTURA),
+            ProgramSlot(18, 0, 19, 30, "PBO Campeonísimo", "Fútbol peruano, debate encendido y cobertura de la Liga 1 Te Apuesto.", TvCategory.DEPORTES),
+            ProgramSlot(19, 30, 20, 0, "PBO Edición Estelar", "El informativo central con los acontecimientos más trascendentales del país.", TvCategory.NOTICIAS),
+            ProgramSlot(20, 0, 20, 30, "Agatha Lys en PBO", "Tarot, astrología y consejos esotéricos con Agatha Lys.", TvCategory.ENTRETENIMIENTO, "Agatha Lys"),
+            ProgramSlot(20, 30, 21, 30, "PBO con RVK y Carmen", "Análisis político, debate y actualidad informativa nacional.", TvCategory.NOTICIAS, "RVK y Carmen"),
+            ProgramSlot(21, 30, 22, 0, "Agatha Lys en PBO", "Orientación astrológica y consultas con Agatha Lys.", TvCategory.ENTRETENIMIENTO, "Agatha Lys"),
+            ProgramSlot(22, 0, 0, 0, "PBO Noticias (Edición Noche)", "Edición nocturna de noticias, política y balance del día.", TvCategory.NOTICIAS)
+        )
+
+        val saturdaySlots = listOf(
+            ProgramSlot(0, 0, 2, 0, "PBO Noticias", "Resumen informativo nocturno.", TvCategory.NOTICIAS),
+            ProgramSlot(2, 0, 6, 0, "PBO con Chema Salcedo", "Lo mejor de la semana con Chema Salcedo.", TvCategory.NOTICIAS, "Chema Salcedo"),
+            ProgramSlot(6, 0, 10, 0, "PBO Noticias (Edición Fin de Semana)", "Resumen noticioso matutino y análisis de la semana política.", TvCategory.NOTICIAS),
+            ProgramSlot(10, 0, 14, 0, "PBO con Chema Salcedo", "Historias, cultura y actualidad con Chema Salcedo.", TvCategory.NOTICIAS, "Chema Salcedo"),
+            ProgramSlot(14, 0, 15, 30, "Rumbo Minero", "Programa especializado en minería, energía y desarrollo industrial del Perú.", TvCategory.CULTURA),
+            ProgramSlot(15, 30, 16, 30, "PBO UMA Emprendedor", "Historias de emprendimiento, negocios e innovación en el Perú.", TvCategory.CULTURA),
+            ProgramSlot(16, 30, 17, 30, "Vox Populi", "La voz ciudadana, denuncias y temas comunitarios de interés público.", TvCategory.NOTICIAS),
+            ProgramSlot(17, 30, 18, 30, "PBO Noticias (Edición Tarde)", "Avance informativo vespertino de fin de semana.", TvCategory.NOTICIAS),
+            ProgramSlot(18, 30, 19, 0, "Agatha Lys en PBO", "Predicciones y horóscopo del fin de semana.", TvCategory.ENTRETENIMIENTO, "Agatha Lys"),
+            ProgramSlot(19, 0, 19, 30, "Rescatando Valores", "Reflexiones cívicas, morales y fortalecimiento de valores familiares.", TvCategory.CULTURA),
+            ProgramSlot(19, 30, 20, 0, "En la Mira", "Reportajes de investigación periodística sobre la realidad del país.", TvCategory.NOTICIAS),
+            ProgramSlot(20, 0, 21, 0, "Conversando con el Perú", "Diálogo y análisis con personalidades y líderes de opinión regional.", TvCategory.CULTURA),
+            ProgramSlot(21, 0, 22, 0, "PBO Salud", "Orientación médica y bienestar para el fin de semana.", TvCategory.CULTURA),
+            ProgramSlot(22, 0, 0, 0, "PBO Noticias", "Cierre noticioso de la jornada sabatina.", TvCategory.NOTICIAS)
+        )
+
+        val sundaySlots = listOf(
+            ProgramSlot(0, 0, 2, 0, "PBO Noticias", "Repetición y resumen informativo.", TvCategory.NOTICIAS),
+            ProgramSlot(2, 0, 6, 0, "PBO con Chema Salcedo", "Madrugada dominical con Chema Salcedo.", TvCategory.NOTICIAS, "Chema Salcedo"),
+            ProgramSlot(6, 0, 7, 0, "PBO Salud", "Consejos de salud y nutrición para comenzar el domingo.", TvCategory.CULTURA),
+            ProgramSlot(7, 0, 8, 0, "Vox Populi", "Opinión pública y temas sociales de actualidad.", TvCategory.NOTICIAS),
+            ProgramSlot(8, 0, 10, 0, "PBO con Dennis Vargas Marín", "Periodismo de opinión, análisis político y debate con Dennis Vargas Marín.", TvCategory.NOTICIAS, "Dennis Vargas Marín"),
+            ProgramSlot(10, 0, 11, 40, "Rumbo Minero", "Economía, minería responsable y oportunidades para el Perú.", TvCategory.CULTURA),
+            ProgramSlot(11, 40, 13, 40, "Entre Nos", "Conversaciones amenas, cultura y personajes destacados de la sociedad.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(13, 40, 14, 40, "PBO con Dennis Vargas Marín", "Segunda entrega de análisis y actualidad dominical con Dennis Vargas Marín.", TvCategory.NOTICIAS, "Dennis Vargas Marín"),
+            ProgramSlot(14, 40, 15, 40, "PBO UMA Emprendedor", "Proyectos peruanos destacados, pymes e innovación.", TvCategory.CULTURA),
+            ProgramSlot(15, 40, 17, 0, "Conversando con el Perú", "Espacio de diálogo con las regiones del país.", TvCategory.CULTURA),
+            ProgramSlot(17, 0, 17, 30, "Rescatando Valores", "Principios cívicos y éticos para la sociedad.", TvCategory.CULTURA),
+            ProgramSlot(17, 30, 18, 0, "En la Mira", "Investigaciones especiales e informes dominicales.", TvCategory.NOTICIAS),
+            ProgramSlot(18, 0, 0, 0, "Baella Talks", "Especial dominical: entrevistas a fondo, actualidad política y análisis con Alfonso Baella.", TvCategory.NOTICIAS, "Alfonso Baella")
+        )
+
+        for (offset in 0..1) {
+            val cal = Calendar.getInstance(tz).apply { add(Calendar.DAY_OF_YEAR, offset) }
+            val slots = when (cal.get(Calendar.DAY_OF_WEEK)) {
+                Calendar.MONDAY -> mondaySlots
+                Calendar.SATURDAY -> saturdaySlots
+                Calendar.SUNDAY -> sundaySlots
+                else -> tuesdayToFridaySlots
+            }
+            allItems.addAll(buildDaySchedule("pe_pbo_tv", tz, offset, slots))
         }
 
         return allItems

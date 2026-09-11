@@ -99,7 +99,7 @@ object ChannelRepository {
                 brandColorHex = 0xFF00838F,
                 description = "Canal de noticias, política y análisis independiente con cobertura nacional.",
                 broadcastQuality = "FHD 1080p",
-                epgAliases = listOf("WILLAX.(Willax).pe", "PBOTV.pe", "PBO TV", "PBO", "Willax")
+                epgAliases = listOf("PBOTV.pe", "PBO.pe", "PBO TV", "PBO", "PBORadio.pe")
             ),
             Channel(
                 id = "pe_sol_tv",

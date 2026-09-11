@@ -36,4 +36,24 @@ class ExampleRobolectricTest {
     org.junit.Assert.assertNotNull(player)
     manager.release()
   }
+
+  @Test
+  fun `pbo tv has authentic epg schedule and no willax alias`() {
+    val channels = com.example.data.ChannelRepository.getChannels()
+    val pbo = channels.find { it.id == "pe_pbo_tv" }
+    org.junit.Assert.assertNotNull("PBO TV channel must exist", pbo)
+    org.junit.Assert.assertTrue("PBO must have correct aliases", pbo!!.epgAliases.contains("PBOTV.pe"))
+    org.junit.Assert.assertTrue("PBO must not contain Willax alias", !pbo.epgAliases.contains("Willax"))
+
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val epgRepo = com.example.data.EpgRepository(context)
+    val schedule = epgRepo.generateOfficialPboSchedule(com.example.model.Country.PERU.timeZone)
+    org.junit.Assert.assertTrue("PBO schedule should not be empty", schedule.isNotEmpty())
+
+    val titles = schedule.map { it.title }
+    org.junit.Assert.assertTrue("Must include PBO Noticias", titles.any { it.contains("PBO Noticias") })
+    org.junit.Assert.assertTrue("Must include Chema Salcedo", titles.any { it.contains("Chema Salcedo") })
+    org.junit.Assert.assertTrue("Must include PBO Campeonísimo", titles.any { it.contains("Campeonísimo") })
+    org.junit.Assert.assertTrue("Must include PBO Salud", titles.any { it.contains("PBO Salud") })
+  }
 }
