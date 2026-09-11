@@ -229,7 +229,19 @@ object ChannelRepository {
                 brandColorHex = 0xFF388E3C,
                 description = "Canal agropecuario con cobertura de tecnología agrícola, ganadería y ecología de Centroamérica.",
                 broadcastQuality = "HD 720p",
-                epgAliases = listOf("Canal.Agrotendencia.TV.cr", "AgrotendenciaTV.cr", "Agrotendencia TV", "Agrotendencia")
+                epgAliases = listOf(
+                    "Canal.Agrotendencia.TV.cr",
+                    "AgrotendenciaTV.cr@SD",
+                    "AgrotendenciaTV.cr",
+                    "agrotendencia_tv",
+                    "Canal Agrotendencia TV",
+                    "Agrotendencia TV",
+                    "Agrotendencia",
+                    "agrotendencia.tv",
+                    "Agrotendencia.cr",
+                    "AgrotendenciaTV.ve",
+                    "agrotendenciatv"
+                )
             )
         )
     }
