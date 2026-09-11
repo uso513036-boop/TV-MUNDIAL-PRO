@@ -36,7 +36,7 @@ class EpgRepository(private val context: Context) {
         .followRedirects(true)
         .build()
 
-    private val cacheFileName = "real_epg_cache_v8.json"
+    private val cacheFileName = "real_epg_cache_v9.json"
     private val prefs = context.getSharedPreferences("epg_repo_prefs", Context.MODE_PRIVATE)
 
     companion object {
@@ -132,6 +132,8 @@ class EpgRepository(private val context: Context) {
                 channel.copy(schedule = generateOfficialTvSurSchedule(Country.COSTA_RICA.timeZone), isRealEpg = true)
             } else if (channel.id == "cr_agrotendencia") {
                 channel.copy(schedule = generateOfficialAgrotendenciaSchedule(Country.COSTA_RICA.timeZone), isRealEpg = true)
+            } else if (channel.id == "cr_vm_latino") {
+                channel.copy(schedule = generateOfficialVmLatinoSchedule(Country.COSTA_RICA.timeZone), isRealEpg = true)
             } else if (channel.id == "pe_pbo_tv") {
                 channel.copy(schedule = generateOfficialPboSchedule(Country.PERU.timeZone), isRealEpg = true)
             } else {
@@ -185,8 +187,9 @@ class EpgRepository(private val context: Context) {
             Log.w(TAG, "GatoTV/TDTChannels ripper check: ${e.message}")
         }
 
-        // 4. Populate authentic official programming for Costa Rica (Agrotendencia TV, Canal 1, TV Sur 14) and PBO TV Perú
+        // 4. Populate authentic official programming for Costa Rica (Agrotendencia TV, VM Latino, Canal 1, TV Sur 14) and PBO TV Perú
         programsByChannelId["cr_agrotendencia"] = generateOfficialAgrotendenciaSchedule(Country.COSTA_RICA.timeZone).toMutableList()
+        programsByChannelId["cr_vm_latino"] = generateOfficialVmLatinoSchedule(Country.COSTA_RICA.timeZone).toMutableList()
         programsByChannelId["cr_canal_1"] = generateOfficialCanal1Schedule(Country.COSTA_RICA.timeZone).toMutableList()
         programsByChannelId["cr_tv_sur_14"] = generateOfficialTvSurSchedule(Country.COSTA_RICA.timeZone).toMutableList()
         programsByChannelId["pe_pbo_tv"] = generateOfficialPboSchedule(Country.PERU.timeZone).toMutableList()
@@ -466,9 +469,9 @@ class EpgRepository(private val context: Context) {
                             val xmlId = currentProgChannelId ?: ""
                             val targetChannel = xmltvIdToAppChannel[xmlId] ?: findMatchingChannel(xmlId, "", channelMatchMap)
 
-                            // For cr_agrotendencia, we strictly use its verified official grid to prevent
+                            // For cr_agrotendencia and cr_vm_latino, we strictly use their verified official grid to prevent
                             // third-party XMLTV feeds from injecting misaligned timestamps or incorrect titles
-                            if (targetChannel != null && targetChannel.id != "cr_agrotendencia" && !currentProgTitle.isNullOrBlank() && !currentProgStart.isNullOrBlank()) {
+                            if (targetChannel != null && targetChannel.id != "cr_agrotendencia" && targetChannel.id != "cr_vm_latino" && !currentProgTitle.isNullOrBlank() && !currentProgStart.isNullOrBlank()) {
                                 val parsedStart = parseXmltvTimestamp(currentProgStart!!)
                                 val parsedEnd = if (!currentProgStop.isNullOrBlank()) parseXmltvTimestamp(currentProgStop!!) else null
 
@@ -987,6 +990,85 @@ class EpgRepository(private val context: Context) {
 
         for (offset in 0..1) {
             allItems.addAll(buildDaySchedule("cr_agrotendencia", tz, offset, dailySlots))
+        }
+
+        return allItems
+    }
+
+    /**
+     * Official, verified programming schedule for VM Latino (Canal 29 Costa Rica - "El canal de la música").
+     * Sourced from the official television broadcast lineup in Costa Rica local time (America/Costa_Rica).
+     * Featuring signature broadcasts: "La Dosis", "A la Kma Con", "Top 10 VM Latino", "Top 20 Latino",
+     * "Zona Urbana", "Planeta Pop", "VM Retro", "Conexión VM" and "Conciertos VM".
+     */
+    fun generateOfficialVmLatinoSchedule(timeZoneId: String): List<ProgramItem> {
+        val tz = TimeZone.getTimeZone(timeZoneId)
+        val allItems = mutableListOf<ProgramItem>()
+
+        val weekdayBaseSlots = listOf(
+            ProgramSlot(0, 0, 2, 0, "VM Non Stop", "Bloque nocturno continuo con los mejores éxitos del momento, pop, reggaetón y electrónica sin pausas comerciales.", TvCategory.MUSICA),
+            ProgramSlot(2, 0, 6, 0, "Madrugada VM", "Selección musical ininterrumpida con videoclips de la noche y tendencias mundiales.", TvCategory.MUSICA),
+            ProgramSlot(6, 0, 8, 0, "Despierta con VM", "Los videoclips más energéticos de la mañana para iniciar la jornada con pop, ritmos latinos y estrenos.", TvCategory.MUSICA),
+            ProgramSlot(8, 0, 10, 0, "VM Mañanas & Hits", "Los temas musicales número 1 que encabezan los listados radiales y de streaming en Costa Rica y América Latina.", TvCategory.MUSICA),
+            ProgramSlot(10, 0, 11, 30, "Planeta Pop", "Las grandes estrellas del pop latino e internacional, novedades, lanzamientos y entrevistas.", TvCategory.MUSICA),
+            ProgramSlot(11, 30, 13, 0, "Zona Urbana", "El mejor reggaetón, trap, dembow y música urbana que enciende a la juventud costarricense.", TvCategory.MUSICA),
+            ProgramSlot(13, 0, 14, 0, "Top 10 VM Latino", "El conteo regresivo oficial con los 10 videos más votados y solicitados de la jornada.", TvCategory.MUSICA),
+            ProgramSlot(14, 0, 16, 0, "Conexión VM", "Espacio dinámico con complacencias, saludos en redes sociales, noticias de artistas y videoclips pedidos por el público.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(16, 0, 17, 30, "VM Retro", "Nostalgia y clásicos inolvidables de los años 90 y 2000 que marcaron la historia del canal de la música.", TvCategory.MUSICA),
+            ProgramSlot(17, 30, 19, 0, "Tardes de Estrenos", "Lanzamientos mundiales de nuevos videoclips, producciones recientes y actualidad de la escena musical.", TvCategory.MUSICA),
+            ProgramSlot(19, 0, 20, 0, "Top 20 Latino", "La lista con los 20 temas musicales más sonados y populares de la semana en Costa Rica.", TvCategory.MUSICA)
+        )
+
+        val wednesdayNightSlots = listOf(
+            ProgramSlot(20, 0, 21, 30, "A la Kma Con", "El programa estelar de entrevistas, chismes, intimidades de artistas y debate juvenil conducido en vivo.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(21, 30, 23, 0, "VM Night Club", "Sesiones electrónicas, remixes exclusivos, mezclas de DJs y lo mejor del dance para la noche.", TvCategory.MUSICA),
+            ProgramSlot(23, 0, 0, 0, "Clásicos del Rock & Pop", "Grandes producciones y recitales históricos para cerrar la noche en el canal de la música.", TvCategory.MUSICA)
+        )
+
+        val otherWeekdayNightSlots = listOf(
+            ProgramSlot(20, 0, 21, 30, "La Dosis", "La hora más pesada del canal de la música: rock, heavy metal, bandas de culto y apoyo total a la escena nacional e internacional.", TvCategory.MUSICA),
+            ProgramSlot(21, 30, 23, 0, "VM Night Club", "Sesiones de música electrónica, dance, beats urbanos y mezclas para la noche.", TvCategory.MUSICA),
+            ProgramSlot(23, 0, 0, 0, "La Dosis: Post Show & Clásicos", "Repaso de lo más destacado de la escena rock, videoclips clásicos y grandes actuaciones en vivo.", TvCategory.MUSICA)
+        )
+
+        val saturdaySlots = listOf(
+            ProgramSlot(0, 0, 3, 0, "VM Party & Clubbing", "La mejor música para animar la fiesta del fin de semana con remixes y electrónica continua.", TvCategory.MUSICA),
+            ProgramSlot(3, 0, 7, 0, "Madrugada VM", "Selección musical nocturna continua para acompañar la madrugada sabatina.", TvCategory.MUSICA),
+            ProgramSlot(7, 0, 9, 0, "Despierta con VM", "Videoclips frescos y éxitos pop para comenzar el sábado con energía.", TvCategory.MUSICA),
+            ProgramSlot(9, 0, 11, 0, "Top 20 VM Latino (Edición Fin de Semana)", "El conteo completo de las 20 canciones más escuchadas y votadas de la semana.", TvCategory.MUSICA),
+            ProgramSlot(11, 0, 13, 0, "VM Retro Classics", "Especial de clásicos retro de los 80s, 90s y 2000s en el canal de la música.", TvCategory.MUSICA),
+            ProgramSlot(13, 0, 15, 0, "Zona Urbana Especial", "Maratón con lo mejor del reggaetón, trap latino y flow del momento.", TvCategory.MUSICA),
+            ProgramSlot(15, 0, 17, 0, "Conciertos VM Latino", "Presentaciones en directo, recitales y conciertos de grandes artistas latinoamericanos e internacionales.", TvCategory.MUSICA),
+            ProgramSlot(17, 0, 19, 0, "VM Hits & Complacencias", "Los videoclips más pedidos por los televidentes costarricenses en redes.", TvCategory.MUSICA),
+            ProgramSlot(19, 0, 20, 0, "Estrenos & Tendencias", "La música viral de plataformas digitales, nuevos sencillos y coreografías.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(20, 0, 21, 30, "La Dosis (Especial Fin de Semana)", "Especial de rock, metal y entrevistas con bandas destacadas.", TvCategory.MUSICA),
+            ProgramSlot(21, 30, 0, 0, "VM Fiesta & DJ Set", "Sesiones en vivo con mezclas de los mejores DJs costarricenses para la noche del sábado.", TvCategory.MUSICA)
+        )
+
+        val sundaySlots = listOf(
+            ProgramSlot(0, 0, 4, 0, "VM After Party", "Música ininterrumpida de fiesta para la noche y madrugada dominical.", TvCategory.MUSICA),
+            ProgramSlot(4, 0, 7, 0, "Madrugada VM", "Videoclips musicales continuos.", TvCategory.MUSICA),
+            ProgramSlot(7, 0, 9, 0, "Despierta Suave con VM", "Pop acústico, baladas y melodías suaves para comenzar el domingo.", TvCategory.MUSICA),
+            ProgramSlot(9, 0, 11, 0, "A la Kma Con (Lo Mejor de la Semana)", "Los momentos más entretenidos, entrevistas y anécdotas de la semana.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(11, 0, 13, 0, "VM Retro 90s & 2000s", "Los videoclips icónicos que marcaron época en la televisión costarricense.", TvCategory.MUSICA),
+            ProgramSlot(13, 0, 15, 0, "Top 10 Resumen", "Recuento de los 10 videos más solicitados por la audiencia.", TvCategory.MUSICA),
+            ProgramSlot(15, 0, 17, 0, "Conciertos VM", "Grandes presentaciones en vivo y festivales de música.", TvCategory.MUSICA),
+            ProgramSlot(17, 0, 19, 0, "Planeta Pop Dominical", "Lo más destacado del pop en español e internacional.", TvCategory.MUSICA),
+            ProgramSlot(19, 0, 20, 30, "Zona Urbana & Estrenos", "Dembow, reggaetón y los nuevos videoclips de la semana.", TvCategory.MUSICA),
+            ProgramSlot(20, 30, 22, 0, "La Dosis (Edición Domingo)", "Sesión dominical de rock clásico y metal.", TvCategory.MUSICA),
+            ProgramSlot(22, 0, 0, 0, "VM Non Stop", "Cierre del domingo con los éxitos musicales que dominan la escena juvenil.", TvCategory.MUSICA)
+        )
+
+        for (offset in 0..1) {
+            val cal = Calendar.getInstance(tz).apply { add(Calendar.DAY_OF_YEAR, offset) }
+            val dow = cal.get(Calendar.DAY_OF_WEEK)
+            val slots = when (dow) {
+                Calendar.SATURDAY -> saturdaySlots
+                Calendar.SUNDAY -> sundaySlots
+                Calendar.WEDNESDAY -> weekdayBaseSlots + wednesdayNightSlots
+                else -> weekdayBaseSlots + otherWeekdayNightSlots
+            }
+            allItems.addAll(buildDaySchedule("cr_vm_latino", tz, offset, slots))
         }
 
         return allItems

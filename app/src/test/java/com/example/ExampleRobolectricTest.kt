@@ -56,4 +56,23 @@ class ExampleRobolectricTest {
     org.junit.Assert.assertTrue("Must include PBO Campeonísimo", titles.any { it.contains("Campeonísimo") })
     org.junit.Assert.assertTrue("Must include PBO Salud", titles.any { it.contains("PBO Salud") })
   }
+
+  @Test
+  fun `vm latino channel has authentic epg schedule`() {
+    val channels = com.example.data.ChannelRepository.getChannels()
+    val vmLatino = channels.find { it.id == "cr_vm_latino" }
+    org.junit.Assert.assertNotNull("VM Latino channel must exist", vmLatino)
+    org.junit.Assert.assertEquals("VM Latino stream must be intact", "https://59ef525c24caa.streamlock.net/vmtv/vmlatino/playlist.m3u8", vmLatino!!.streamUrl)
+
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val epgRepo = com.example.data.EpgRepository(context)
+    val schedule = epgRepo.generateOfficialVmLatinoSchedule(com.example.model.Country.COSTA_RICA.timeZone)
+    org.junit.Assert.assertTrue("VM Latino schedule should not be empty", schedule.isNotEmpty())
+
+    val titles = schedule.map { it.title }
+    org.junit.Assert.assertTrue("Must include La Dosis or A la Kma Con", titles.any { it.contains("La Dosis") || it.contains("A la Kma Con") })
+    org.junit.Assert.assertTrue("Must include Top 10 or Top 20", titles.any { it.contains("Top 10") || it.contains("Top 20") })
+    org.junit.Assert.assertTrue("Must include Zona Urbana", titles.any { it.contains("Zona Urbana") })
+    org.junit.Assert.assertTrue("Must include VM Retro", titles.any { it.contains("VM Retro") })
+  }
 }
