@@ -71,7 +71,11 @@ import com.example.model.Channel
 import com.example.player.TvPlayerManager
 import com.example.player.VideoPlaybackState
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import kotlin.math.abs
 
 @OptIn(UnstableApi::class)
@@ -459,36 +463,27 @@ fun VideoPlayerView(
                                     )
                                 }
 
-                                // ⏰ Horario de inicio y fin + Badge EPG (Solo si es programación real)
-                                if (hasRealCurrent && currentProgram!!.startTime.isNotBlank()) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
+                                // ⏰ Horario de inicio y fin en formato de 12 horas (ej: "9:00 PM - 10:00 PM")
+                                if (hasRealCurrent && (currentProgram!!.epochStartMs > 0L || currentProgram.startTime.isNotBlank())) {
+                                    val start12 = formatTo12HourTime(currentProgram.epochStartMs, currentProgram.startTime, channel.country.timeZone)
+                                    val end12 = formatTo12HourTime(currentProgram.epochEndMs, currentProgram.endTime, channel.country.timeZone)
+                                    val timeRange12 = if (start12.isNotBlank() && end12.isNotBlank()) {
+                                        "$start12 - $end12"
+                                    } else if (start12.isNotBlank()) {
+                                        start12
+                                    } else ""
+
+                                    if (timeRange12.isNotBlank()) {
                                         Surface(
-                                            color = Color.White.copy(alpha = 0.12f),
+                                            color = Color.White.copy(alpha = 0.14f),
                                             shape = RoundedCornerShape(4.dp)
                                         ) {
                                             Text(
-                                                text = "⏰ ${currentProgram.startTime} - ${currentProgram.endTime}",
+                                                text = timeRange12,
                                                 color = Color(0xFFFFD54F),
                                                 fontSize = 12.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                            )
-                                        }
-
-                                        Surface(
-                                            color = Color(0xFF00C853).copy(alpha = 0.25f),
-                                            border = BorderStroke(0.5.dp, Color(0xFF00C853)),
-                                            shape = RoundedCornerShape(4.dp)
-                                        ) {
-                                            Text(
-                                                text = "📡 GUÍA OFICIAL",
-                                                color = Color(0xFF69F0AE),
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                                fontWeight = FontWeight.SemiBold,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.5.dp)
                                             )
                                         }
                                     }
@@ -512,7 +507,7 @@ fun VideoPlayerView(
 
                             Spacer(modifier = Modifier.height(6.dp))
 
-                            // Fila 2: ⏭️ "Siguiente:" → Nombre del próximo programa + hora de inicio
+                            // Fila 2: ⏭️ "Siguiente:" → Nombre del próximo programa + hora de inicio en formato de 12 horas
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
@@ -525,7 +520,12 @@ fun VideoPlayerView(
                                 )
                                 Text(
                                     text = if (hasRealNext) {
-                                        "${nextProgram!!.title} (${nextProgram.startTime})"
+                                        val nextStart12 = formatTo12HourTime(nextProgram!!.epochStartMs, nextProgram.startTime, channel.country.timeZone)
+                                        if (nextStart12.isNotBlank()) {
+                                            "${nextProgram.title} ($nextStart12)"
+                                        } else {
+                                            nextProgram.title
+                                        }
                                     } else {
                                         "Programación no disponible"
                                     },
@@ -579,3 +579,34 @@ fun VideoPlayerView(
         }
     }
 }
+
+private fun formatTo12HourTime(
+    epochMs: Long,
+    fallbackTimeStr: String,
+    channelTimeZone: String
+): String {
+    if (epochMs > 0L) {
+        val sdf = SimpleDateFormat("h:mm a", Locale.US).apply {
+            timeZone = TimeZone.getDefault()
+        }
+        return sdf.format(Date(epochMs))
+    }
+    if (fallbackTimeStr.isBlank()) return ""
+    return try {
+        val sdf24 = SimpleDateFormat("HH:mm", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone(channelTimeZone)
+        }
+        val date = sdf24.parse(fallbackTimeStr)
+        if (date != null) {
+            val sdf12 = SimpleDateFormat("h:mm a", Locale.US).apply {
+                timeZone = TimeZone.getDefault()
+            }
+            sdf12.format(date)
+        } else {
+            fallbackTimeStr
+        }
+    } catch (_: Exception) {
+        fallbackTimeStr
+    }
+}
+

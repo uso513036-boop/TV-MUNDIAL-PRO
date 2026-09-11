@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,8 +25,6 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -46,7 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.Channel
-import com.example.model.TvCategory
+import com.example.model.Country
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.util.Calendar
@@ -57,8 +56,10 @@ fun ChannelListView(
     selectedChannel: Channel?,
     onSelectChannel: (Channel) -> Unit,
     onToggleFavorite: (Channel) -> Unit,
-    selectedCategory: TvCategory,
-    onSelectCategory: (TvCategory) -> Unit,
+    selectedCountry: Country?,
+    onSelectCountry: (Country?) -> Unit,
+    onlyFavorites: Boolean = false,
+    onToggleOnlyFavorites: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var currentEpochMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -81,40 +82,53 @@ fun ChannelListView(
             .fillMaxWidth()
             .testTag("channel_list_view")
     ) {
-        // Category Filter Chips (Horizontal Scrollable)
+        // Country Filter Pills (Moved down here where categories were previously)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            TvCategory.values().forEach { category ->
-                val isSelected = selectedCategory == category
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { onSelectCategory(category) },
-                    label = {
-                        Text(
-                            text = category.displayName,
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Color(0xFF0F172A),
-                        labelColor = Color(0xFF94A3B8),
-                        selectedContainerColor = Color(0xFF00E5FF),
-                        selectedLabelColor = Color(0xFF0F172A)
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        borderColor = if (isSelected) Color(0xFF00E5FF) else Color(0xFF1E293B),
-                        enabled = true,
-                        selected = isSelected
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                )
-            }
+            // Todos los países
+            CountryFilterPill(
+                text = "Todos 🌐",
+                isSelected = selectedCountry == null && !onlyFavorites,
+                onClick = {
+                    onToggleOnlyFavorites(false)
+                    onSelectCountry(null)
+                }
+            )
+
+            // Perú
+            CountryFilterPill(
+                text = "Perú 🇵🇪",
+                isSelected = selectedCountry == Country.PERU && !onlyFavorites,
+                onClick = {
+                    onToggleOnlyFavorites(false)
+                    onSelectCountry(Country.PERU)
+                }
+            )
+
+            // Costa Rica
+            CountryFilterPill(
+                text = "Costa Rica 🇨🇷",
+                isSelected = selectedCountry == Country.COSTA_RICA && !onlyFavorites,
+                onClick = {
+                    onToggleOnlyFavorites(false)
+                    onSelectCountry(Country.COSTA_RICA)
+                }
+            )
+
+            // Favoritos
+            CountryFilterPill(
+                text = "★ Favoritos",
+                isSelected = onlyFavorites,
+                onClick = {
+                    onToggleOnlyFavorites(!onlyFavorites)
+                }
+            )
         }
 
         // Channels List
@@ -295,3 +309,37 @@ fun ChannelListView(
         }
     }
 }
+
+@Composable
+private fun CountryFilterPill(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = if (isSelected) Color(0xFF00E5FF) else Color(0xFF0F172A),
+        border = BorderStroke(
+            1.dp,
+            if (isSelected) Color(0xFF00E5FF) else Color(0xFF1E293B)
+        ),
+        modifier = modifier
+            .height(34.dp)
+            .clickable { onClick() }
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)
+        ) {
+            Text(
+                text = text,
+                color = if (isSelected) Color(0xFF070B14) else Color(0xFFCBD5E1),
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                fontSize = 12.sp,
+                maxLines = 1
+            )
+        }
+    }
+}
+

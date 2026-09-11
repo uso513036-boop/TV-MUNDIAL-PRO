@@ -25,7 +25,7 @@ enum class AppTab(val title: String) {
 data class TvUiState(
     val allChannels: List<Channel> = emptyList(),
     val selectedChannel: Channel? = null,
-    val selectedCountry: Country? = Country.PERU, // Default to Peru as requested
+    val selectedCountry: Country? = null, // Default to null (Todos los países) so all available channels are shown
     val selectedCategory: TvCategory = TvCategory.TODOS,
     val onlyFavorites: Boolean = false,
     val searchQuery: String = "",
@@ -89,7 +89,7 @@ class TvMundialViewModel(application: Application) : AndroidViewModel(applicatio
         _uiState.value = TvUiState(
             allChannels = channelsWithCachedEpg,
             selectedChannel = initialChannel,
-            selectedCountry = Country.PERU,
+            selectedCountry = null, // Default to null (Todos los países)
             favoriteIds = savedFavorites,
             reminderIds = savedReminders,
             lastEpgSyncTime = epgRepository.getLastSyncTimestamp()

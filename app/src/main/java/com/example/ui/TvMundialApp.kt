@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -35,6 +37,8 @@ import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
@@ -72,6 +76,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.model.Country
+import com.example.model.TvCategory
 import com.example.player.TvPlayerManager
 import com.example.ui.components.ChannelListView
 import com.example.ui.components.EpgScheduleView
@@ -308,55 +313,41 @@ fun TvMundialApp(
                     )
                 }
 
-                // Country Selector Pills (Peru, Costa Rica, Todos, Favoritos)
+                // Category Filter Chips at the top (where countries were before)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Perú Pill
-                    CountryFilterPill(
-                        text = "Perú 🇵🇪",
-                        isSelected = uiState.selectedCountry == Country.PERU && !uiState.onlyFavorites,
-                        onClick = {
-                            viewModel.setOnlyFavorites(false)
-                            viewModel.setCountryFilter(Country.PERU)
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    // Costa Rica Pill
-                    CountryFilterPill(
-                        text = "Costa Rica 🇨🇷",
-                        isSelected = uiState.selectedCountry == Country.COSTA_RICA && !uiState.onlyFavorites,
-                        onClick = {
-                            viewModel.setOnlyFavorites(false)
-                            viewModel.setCountryFilter(Country.COSTA_RICA)
-                        },
-                        modifier = Modifier.weight(1.2f)
-                    )
-
-                    // Todos Pill
-                    CountryFilterPill(
-                        text = "Todos 🌐",
-                        isSelected = uiState.selectedCountry == null && !uiState.onlyFavorites,
-                        onClick = {
-                            viewModel.setOnlyFavorites(false)
-                            viewModel.setCountryFilter(null)
-                        },
-                        modifier = Modifier.weight(0.9f)
-                    )
-
-                    // Favoritos Pill
-                    CountryFilterPill(
-                        text = "★",
-                        isSelected = uiState.onlyFavorites,
-                        onClick = {
-                            viewModel.setOnlyFavorites(!uiState.onlyFavorites)
-                        },
-                        modifier = Modifier.width(42.dp)
-                    )
+                    TvCategory.values().forEach { category ->
+                        val isSelected = uiState.selectedCategory == category
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { viewModel.setCategoryFilter(category) },
+                            label = {
+                                Text(
+                                    text = category.displayName,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = Color(0xFF0F172A),
+                                labelColor = Color(0xFF94A3B8),
+                                selectedContainerColor = Color(0xFF00E5FF),
+                                selectedLabelColor = Color(0xFF0F172A)
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                borderColor = if (isSelected) Color(0xFF00E5FF) else Color(0xFF1E293B),
+                                enabled = true,
+                                selected = isSelected
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -447,8 +438,10 @@ fun TvMundialApp(
                             playerManager.playChannel(it)
                         },
                         onToggleFavorite = { viewModel.toggleFavorite(it) },
-                        selectedCategory = uiState.selectedCategory,
-                        onSelectCategory = { viewModel.setCategoryFilter(it) },
+                        selectedCountry = uiState.selectedCountry,
+                        onSelectCountry = { viewModel.setCountryFilter(it) },
+                        onlyFavorites = uiState.onlyFavorites,
+                        onToggleOnlyFavorites = { viewModel.setOnlyFavorites(it) },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -491,43 +484,14 @@ fun TvMundialApp(
                             viewModel.setActiveTab(AppTab.EN_VIVO)
                         },
                         onToggleFavorite = { viewModel.toggleFavorite(it) },
-                        selectedCategory = uiState.selectedCategory,
-                        onSelectCategory = { viewModel.setCategoryFilter(it) },
+                        selectedCountry = uiState.selectedCountry,
+                        onSelectCountry = { viewModel.setCountryFilter(it) },
+                        onlyFavorites = uiState.onlyFavorites,
+                        onToggleOnlyFavorites = { viewModel.setOnlyFavorites(it) },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun CountryFilterPill(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = if (isSelected) Color(0xFF00E5FF) else Color(0xFF131C2E),
-        modifier = modifier
-            .height(34.dp)
-            .clickable { onClick() }
-            .border(
-                1.dp,
-                if (isSelected) Color(0xFF00E5FF) else Color(0xFF1E293B),
-                RoundedCornerShape(20.dp)
-            )
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = text,
-                color = if (isSelected) Color(0xFF070B14) else Color(0xFFCBD5E1),
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                fontSize = 12.sp,
-                maxLines = 1
-            )
         }
     }
 }
