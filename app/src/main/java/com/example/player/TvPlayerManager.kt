@@ -46,6 +46,7 @@ class TvPlayerManager(context: Context) {
             val renderersFactory = DefaultRenderersFactory(appContext)
                 .setEnableDecoderFallback(true)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
+                .setAllowedVideoJoiningTimeMs(5000L)
 
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
@@ -98,6 +99,9 @@ class TvPlayerManager(context: Context) {
     }
 
     fun playChannel(channel: Channel) {
+        if (currentChannel?.id == channel.id && _playbackState.value.isPlaying && !_playbackState.value.hasError) {
+            return
+        }
         currentChannel = channel
         currentStreamIndex = 0
         loadStream(channel.streamUrl, isBackup = false)
