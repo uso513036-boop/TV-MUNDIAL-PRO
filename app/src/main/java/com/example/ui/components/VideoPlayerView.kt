@@ -30,7 +30,7 @@ import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.VolumeMute
 import androidx.compose.material.icons.filled.VolumeUp
@@ -146,7 +146,7 @@ fun VideoPlayerView(
     Box(
         modifier = modifier
             .background(Color.Black)
-            .pointerInput(channel.id) {
+            .pointerInput(channel.id, isFullscreen) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     var totalDragX = 0f
@@ -160,23 +160,29 @@ fun VideoPlayerView(
                         if (dragChange == null || !dragChange.pressed) {
                             val wasConsumedByChild = dragChange?.isConsumed ?: false
                             if (hasDragged) {
-                                // Prioridad de deslizamiento horizontal a los lados (izquierda = siguiente, derecha = anterior)
-                                if (abs(totalDragX) >= abs(totalDragY)) {
-                                    if (totalDragX < -40f) {
-                                        onNextChannel()
-                                        showControls = true
-                                    } else if (totalDragX > 40f) {
-                                        onPreviousChannel()
-                                        showControls = true
+                                if (isFullscreen) {
+                                    // En pantalla completa: ÚNICAMENTE deslizar hacia arriba o hacia abajo para cambiar de canal
+                                    if (abs(totalDragY) > abs(totalDragX) && abs(totalDragY) >= 35f) {
+                                        if (totalDragY < 0f) {
+                                            // Deslizar hacia arriba -> Siguiente canal
+                                            onNextChannel()
+                                            showControls = true
+                                        } else {
+                                            // Deslizar hacia abajo -> Canal anterior
+                                            onPreviousChannel()
+                                            showControls = true
+                                        }
                                     }
                                 } else {
-                                    // Deslizamiento vertical alternativo (arriba = siguiente, abajo = anterior)
-                                    if (totalDragY < -40f) {
-                                        onNextChannel()
-                                        showControls = true
-                                    } else if (totalDragY > 40f) {
-                                        onPreviousChannel()
-                                        showControls = true
+                                    // En vista normal: tocar o deslizar
+                                    if (abs(totalDragY) >= abs(totalDragX)) {
+                                        if (totalDragY < -40f) {
+                                            onNextChannel()
+                                            showControls = true
+                                        } else if (totalDragY > 40f) {
+                                            onPreviousChannel()
+                                            showControls = true
+                                        }
                                     }
                                 }
                             } else if (!wasConsumedByChild) {
@@ -189,7 +195,7 @@ fun VideoPlayerView(
                             val deltaY = dragChange.position.y - dragChange.previousPosition.y
                             totalDragX += deltaX
                             totalDragY += deltaY
-                            if (abs(totalDragX) > 25f || abs(totalDragY) > 25f) {
+                            if (abs(totalDragY) > 25f || (!isFullscreen && abs(totalDragX) > 25f)) {
                                 hasDragged = true
                                 dragChange.consume()
                             }
@@ -557,13 +563,13 @@ fun VideoPlayerView(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.SwapHoriz,
+                        imageVector = Icons.Default.SwapVert,
                         contentDescription = null,
                         tint = Color(0xFF00E5FF),
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = "Desliza a los lados para cambiar de canal",
+                        text = "Desliza arriba o abajo para cambiar de canal",
                         color = Color.White,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
