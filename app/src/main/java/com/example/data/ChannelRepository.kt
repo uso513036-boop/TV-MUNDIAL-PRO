@@ -242,6 +242,58 @@ object ChannelRepository {
                     "AgrotendenciaTV.ve",
                     "agrotendenciatv"
                 )
+            ),
+            Channel(
+                id = "cr_retrox_tv",
+                number = 101,
+                name = "Retrox TV Costa Rica",
+                shortName = "Retrox TV",
+                country = Country.COSTA_RICA,
+                category = TvCategory.ENTRETENIMIENTO,
+                streamUrl = "https://stream-retroxtv.site/live/retroxtv.m3u8",
+                backupStreamUrls = listOf(
+                    "https://stream-retroxtv.site/live/ofertasplustv.m3u8"
+                ),
+                logoText = "RTX",
+                brandColorHex = 0xFFE50914,
+                description = "Canal oficial de TV Group Retrox Costa Rica. Series y películas clásicas de los 70s, 80s y 90s: MacGyver, Bonanza, Ultraman, El Hombre Nuclear, Smallville y The Nanny.",
+                broadcastQuality = "FHD 1080p",
+                epgAliases = listOf("RetroxTV.cr@SD", "RetroxTV.cr", "Retrox TV", "RetroxTV", "Retrox TV Costa Rica", "Retrox")
+            ),
+            Channel(
+                id = "cr_retrox_plus",
+                number = 102,
+                name = "Retrox Plus Costa Rica",
+                shortName = "Retrox Plus",
+                country = Country.COSTA_RICA,
+                category = TvCategory.ENTRETENIMIENTO,
+                streamUrl = "https://stream-retroxtv.site/live/retroxplus.m3u8",
+                backupStreamUrls = listOf(
+                    "https://stream-retroxtv.site/live/retroxtv.m3u8"
+                ),
+                logoText = "RTX+",
+                brandColorHex = 0xFF6200EA,
+                description = "Canal premium de TV Group Retrox Costa Rica con contenidos remasterizados, documentales retro, archivos históricos y maratones temáticas especiales.",
+                broadcastQuality = "FHD 1080p",
+                epgAliases = listOf("RetroxPlus.cr", "Retrox Plus", "Retrox Plus Costa Rica", "RetroxPlus")
+            ),
+            Channel(
+                id = "cr_retro_cartoons",
+                number = 103,
+                name = "Retro Cartoons Costa Rica",
+                shortName = "Retro Cartoons",
+                country = Country.COSTA_RICA,
+                category = TvCategory.INFANTIL,
+                streamUrl = "https://stream-retroxtv.site/live/retroxtv.m3u8",
+                backupStreamUrls = listOf(
+                    "https://stream-retroxtv.site/live/retroxplus.m3u8",
+                    "https://stream-retroxtv.site/live/retroxmusic.m3u8"
+                ),
+                logoText = "CARTOONS",
+                brandColorHex = 0xFFFF9800,
+                description = "Señal dedicada a la animación clásica de los 80s y 90s: Thundercats, He-Man, Transformers G1, Los Cazafantasmas, Mazinger Z, Looney Tunes y Don Gato.",
+                broadcastQuality = "FHD 1080p",
+                epgAliases = listOf("RetroxCartoons.cr", "RetroCartoons.cr", "Retrox Cartoons", "Retro Cartoons", "Retro Cartoons Costa Rica")
             )
         )
     }

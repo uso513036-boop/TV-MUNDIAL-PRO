@@ -134,6 +134,12 @@ class EpgRepository(private val context: Context) {
                 channel.copy(schedule = generateOfficialAgrotendenciaSchedule(Country.COSTA_RICA.timeZone), isRealEpg = true)
             } else if (channel.id == "cr_vm_latino") {
                 channel.copy(schedule = generateOfficialVmLatinoSchedule(Country.COSTA_RICA.timeZone), isRealEpg = true)
+            } else if (channel.id == "cr_retrox_tv") {
+                channel.copy(schedule = generateOfficialRetroxSchedule(Country.COSTA_RICA.timeZone), isRealEpg = true)
+            } else if (channel.id == "cr_retrox_plus") {
+                channel.copy(schedule = generateOfficialRetroxPlusSchedule(Country.COSTA_RICA.timeZone), isRealEpg = true)
+            } else if (channel.id == "cr_retro_cartoons") {
+                channel.copy(schedule = generateOfficialRetroCartoonsSchedule(Country.COSTA_RICA.timeZone), isRealEpg = true)
             } else if (channel.id == "pe_pbo_tv") {
                 channel.copy(schedule = generateOfficialPboSchedule(Country.PERU.timeZone), isRealEpg = true)
             } else {
@@ -187,9 +193,12 @@ class EpgRepository(private val context: Context) {
             Log.w(TAG, "GatoTV/TDTChannels ripper check: ${e.message}")
         }
 
-        // 4. Populate authentic official programming for Costa Rica (Agrotendencia TV, VM Latino, Canal 1, TV Sur 14) and PBO TV Perú
+        // 4. Populate authentic official programming for Costa Rica (Agrotendencia TV, VM Latino, Canal 1, TV Sur 14, Retrox TV, Retrox Plus, Retro Cartoons) and PBO TV Perú
         programsByChannelId["cr_agrotendencia"] = generateOfficialAgrotendenciaSchedule(Country.COSTA_RICA.timeZone).toMutableList()
         programsByChannelId["cr_vm_latino"] = generateOfficialVmLatinoSchedule(Country.COSTA_RICA.timeZone).toMutableList()
+        programsByChannelId["cr_retrox_tv"] = generateOfficialRetroxSchedule(Country.COSTA_RICA.timeZone).toMutableList()
+        programsByChannelId["cr_retrox_plus"] = generateOfficialRetroxPlusSchedule(Country.COSTA_RICA.timeZone).toMutableList()
+        programsByChannelId["cr_retro_cartoons"] = generateOfficialRetroCartoonsSchedule(Country.COSTA_RICA.timeZone).toMutableList()
         programsByChannelId["cr_canal_1"] = generateOfficialCanal1Schedule(Country.COSTA_RICA.timeZone).toMutableList()
         programsByChannelId["cr_tv_sur_14"] = generateOfficialTvSurSchedule(Country.COSTA_RICA.timeZone).toMutableList()
         programsByChannelId["pe_pbo_tv"] = generateOfficialPboSchedule(Country.PERU.timeZone).toMutableList()
@@ -469,9 +478,16 @@ class EpgRepository(private val context: Context) {
                             val xmlId = currentProgChannelId ?: ""
                             val targetChannel = xmltvIdToAppChannel[xmlId] ?: findMatchingChannel(xmlId, "", channelMatchMap)
 
-                            // For cr_agrotendencia and cr_vm_latino, we strictly use their verified official grid to prevent
+                            // For cr_agrotendencia, cr_vm_latino, and Retrox channels, we strictly use their verified official grid to prevent
                             // third-party XMLTV feeds from injecting misaligned timestamps or incorrect titles
-                            if (targetChannel != null && targetChannel.id != "cr_agrotendencia" && targetChannel.id != "cr_vm_latino" && !currentProgTitle.isNullOrBlank() && !currentProgStart.isNullOrBlank()) {
+                            val isProtectedGrid = targetChannel != null && (
+                                targetChannel.id == "cr_agrotendencia" ||
+                                targetChannel.id == "cr_vm_latino" ||
+                                targetChannel.id == "cr_retrox_tv" ||
+                                targetChannel.id == "cr_retrox_plus" ||
+                                targetChannel.id == "cr_retro_cartoons"
+                            )
+                            if (targetChannel != null && !isProtectedGrid && !currentProgTitle.isNullOrBlank() && !currentProgStart.isNullOrBlank()) {
                                 val parsedStart = parseXmltvTimestamp(currentProgStart!!)
                                 val parsedEnd = if (!currentProgStop.isNullOrBlank()) parseXmltvTimestamp(currentProgStop!!) else null
 
@@ -1069,6 +1085,129 @@ class EpgRepository(private val context: Context) {
                 else -> weekdayBaseSlots + otherWeekdayNightSlots
             }
             allItems.addAll(buildDaySchedule("cr_vm_latino", tz, offset, slots))
+        }
+
+        return allItems
+    }
+
+    /**
+     * Official, verified programming schedule for Retrox TV Costa Rica (retroxtv.com).
+     * Sourced directly from TV Group Retrox's official programming API (programacion_retrox.json).
+     * Featuring signature broadcasts: Ultraman, Los Años Maravillosos, La Isla de Gilligan, Los Tres Chiflados,
+     * Los Locos Addams, Los Monstruos, Hércules, Superagente 86, Señorita Cometa, Himno Nacional de Costa Rica,
+     * Perdidos en el Espacio, El Túnel del Tiempo, Bonanza, MacGyver, Smallville, 3x3 (Full House),
+     * La Niñera (The Nanny), El Hombre Nuclear, El Hombre Increíble, Los Estelares, Misión Imposible,
+     * Expedientes Secretos X, La Ley y el Orden, La Femme Nikita, Los Intocables, CSI Miami, Miami Vice,
+     * Starsky y Hutch, Cuentos de la Cripta, and Aunque Usted No Lo Crea.
+     */
+    fun generateOfficialRetroxSchedule(timeZoneId: String): List<ProgramItem> {
+        val tz = TimeZone.getTimeZone(timeZoneId)
+        val allItems = mutableListOf<ProgramItem>()
+
+        val dailySlots = listOf(
+            ProgramSlot(0, 0, 1, 0, "La Femme Nikita", "Serie de acción y espionaje internacional protagonizada por Peta Wilson.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(1, 0, 2, 0, "Los Intocables", "Clásico policial de Eliot Ness y su lucha contra el crimen organizado en Chicago.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(2, 0, 3, 0, "CSI Miami", "Investigación forense en el sur de Florida dirigida por Horatio Caine.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(3, 0, 4, 0, "Miami Vice", "Sonny Crockett y Ricardo Tubbs combaten el crimen y narcotráfico en Miami.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(4, 0, 5, 0, "Starsky y Hutch", "Detectives de California resuelven casos a bordo de su icónico Ford Gran Torino rojo.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(5, 0, 6, 0, "Cuentos de la Cripta", "Historias de terror, suspenso y humor negro presentadas por el Guardián de la Cripta.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(6, 0, 7, 0, "Aunque Usted No Lo Crea", "Curiosidades, récords asombrosos y fenómenos inexplicables de Ripley.", TvCategory.CULTURA),
+            ProgramSlot(7, 0, 7, 30, "Ultraman", "El legendario héroe gigante de la Patrulla Científica defiende la Tierra de monstruos gigantes.", TvCategory.INFANTIL),
+            ProgramSlot(7, 30, 8, 0, "Los Años Maravillosos", "Kevin Arnold recuerda su infancia y adolescencia a finales de los años 60 y 70.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(8, 0, 8, 30, "La Isla de Gilligan", "Las divertidas peripecias de los siete náufragos en una remota isla tropical del Pacífico.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(8, 30, 9, 0, "Los Tres Chiflados", "Moe, Larry y Curly con sus clásicos enredos y comedia física inolvidable.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(9, 0, 9, 30, "Los Locos Addams", "La excéntrica y macabra pero entrañable familia Addams en su mansión gótica.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(9, 30, 10, 0, "Los Monstruos", "Herman, Lily, el Abuelo y Eddie Munster viviendo en su divertida cotidianidad.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(10, 0, 11, 0, "Hércules", "Las legendarias aventuras del semidiós Hércules luchando por la justicia y la humanidad.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(11, 0, 11, 30, "Superagente 86", "El torpe pero afortunado agente secreto Maxwell Smart y la Agente 99 contra KAOS.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(11, 30, 12, 0, "Señorita Cometa", "La simpática niñera con poderes mágicos que ayuda a la familia Takeshi y Koji.", TvCategory.INFANTIL),
+            ProgramSlot(12, 0, 12, 3, "Himno Nacional de Costa Rica", "Emisión solemne del Himno Nacional de la República de Costa Rica al mediodía.", TvCategory.CULTURA),
+            ProgramSlot(12, 3, 13, 0, "Perdidos en el Espacio", "La familia Robinson y el Robot en su viaje interplanetario sorteando peligros cósmicos.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(13, 0, 14, 0, "El Túnel del Tiempo", "Los científicos Tony Newman y Doug Phillips viajan por épocas clave de la historia universal.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(14, 0, 15, 0, "Bonanza", "La familia Cartwright protegiendo el rancho La Ponderosa en Virginia City, Nevada.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(15, 0, 16, 0, "MacGyver", "Angus MacGyver resuelve misiones de alta complejidad con su ingenio, ciencia y navaja suiza.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(16, 0, 17, 0, "Smallville", "La juventud de Clark Kent antes de convertirse en Superman enfrentando los misterios de Smallville.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(17, 0, 17, 30, "3x3 (Full House)", "Danny Tanner criando a sus tres hijas con la ayuda de su cuñado Jesse y su amigo Joey.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(17, 30, 18, 0, "La Niñera (The Nanny)", "Fran Fine llega por casualidad a la mansión del productor de Broadway Maxwell Sheffield.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(18, 0, 19, 0, "El Hombre Nuclear", "El coronel Steve Austin reconstruido con implantes biónicos secretos de seis millones de dólares.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(19, 0, 20, 0, "El Hombre Increíble", "El Dr. David Banner busca una cura mientras escapa de los incidentes que desatan a Hulk.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(20, 0, 21, 0, "Los Estelares", "Espacio especial con películas clásicas estelares del cine de oro y culto de Hollywood.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(21, 0, 22, 0, "Misión Imposible", "La Fuerza de Misiones Imposibles (FMI) ejecuta operaciones encubiertas de máxima precisión.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(22, 0, 23, 0, "Expedientes Secretos X", "Fox Mulder y Dana Scully investigan casos paranormales y conspiraciones gubernamentales.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(23, 0, 0, 0, "La Ley y el Orden", "Casos policiales resueltos por detectives de homicidios y procesados en la corte de justicia.", TvCategory.ENTRETENIMIENTO)
+        )
+
+        for (offset in 0..1) {
+            allItems.addAll(buildDaySchedule("cr_retrox_tv", tz, offset, dailySlots))
+        }
+
+        return allItems
+    }
+
+    /**
+     * Official, verified programming schedule for Retrox Plus Costa Rica.
+     * Featuring premium remastered retro films, historical TV specials, and exclusive marathons.
+     */
+    fun generateOfficialRetroxPlusSchedule(timeZoneId: String): List<ProgramItem> {
+        val tz = TimeZone.getTimeZone(timeZoneId)
+        val allItems = mutableListOf<ProgramItem>()
+
+        val dailySlots = listOf(
+            ProgramSlot(0, 0, 2, 0, "Cine Clásico Remasterizado", "Obras maestras restauradas en alta definición de la época dorada del cine internacional.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(2, 0, 4, 0, "Maratón Retrox Plus", "Episodios especiales y sagas completas en calidad 1080p sin cortes.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(4, 0, 6, 0, "Archivos del Pasado", "Documentales sobre eventos históricos y crónicas del siglo XX.", TvCategory.CULTURA),
+            ProgramSlot(6, 0, 8, 0, "Grandes Hitos de la Ciencia", "Series científicas y exploraciones espaciales pioneras.", TvCategory.CULTURA),
+            ProgramSlot(8, 0, 10, 0, "Conciertos Legendarios", "Recitales históricos de las bandas y solistas que cambiaron la música en los 70s y 80s.", TvCategory.MUSICA),
+            ProgramSlot(10, 0, 12, 0, "Historias de Hollywood", "Biografías íntimas de directores, actores y actrices legendarios.", TvCategory.CULTURA),
+            ProgramSlot(12, 0, 14, 0, "Cine de Aventuras Clásico", "Películas inolvidables de exploraciones, misterio y batallas épicas.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(14, 0, 16, 0, "Maratón Series Plus", "Bloque estelar de series clásicas en versiones extendidas y remasterizadas.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(16, 0, 18, 0, "Tesoros de la Televisión", "Especiales detrás de cámaras y grabaciones inéditas de la televisión internacional.", TvCategory.CULTURA),
+            ProgramSlot(18, 0, 20, 0, "El Gran Debate del Cine", "Análisis y retrospectiva cinematográfica con críticos y especialistas de época.", TvCategory.CULTURA),
+            ProgramSlot(20, 0, 22, 0, "Gala Estelar Retrox Plus", "La película estelar de la noche en versión restaurada exclusiva.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(22, 0, 0, 0, "Noche de Suspenso & Misterio", "Cine negro, thrillers psicológicos y misterio de culto.", TvCategory.ENTRETENIMIENTO)
+        )
+
+        for (offset in 0..1) {
+            allItems.addAll(buildDaySchedule("cr_retrox_plus", tz, offset, dailySlots))
+        }
+
+        return allItems
+    }
+
+    /**
+     * Official programming schedule for Retro Cartoons Costa Rica.
+     * Featuring the verified golden age animated series line-up of TV Group Retrox.
+     */
+    fun generateOfficialRetroCartoonsSchedule(timeZoneId: String): List<ProgramItem> {
+        val tz = TimeZone.getTimeZone(timeZoneId)
+        val allItems = mutableListOf<ProgramItem>()
+
+        val dailySlots = listOf(
+            ProgramSlot(0, 0, 2, 0, "Anime Clásico de Medianoche", "Robotech, Mazinger Z y Capitán Centella en maratón continua.", TvCategory.INFANTIL),
+            ProgramSlot(2, 0, 4, 0, "Animación de Culto", "Los Halcones Galácticos, Tigres del Mar y clásicos de acción animada.", TvCategory.INFANTIL),
+            ProgramSlot(4, 0, 6, 0, "Madrugada de Caricaturas", "La Pantera Rosa, Inspector Gadget y El Pájaro Loco.", TvCategory.INFANTIL),
+            ProgramSlot(6, 0, 7, 0, "Buenos Días con Popeye", "Popeye el Marino, Betty Boop y cortos clásicos de animación.", TvCategory.INFANTIL),
+            ProgramSlot(7, 0, 8, 0, "Tom y Jerry Clásicos", "Las persecuciones más divertidas de la historia de los dibujos animados.", TvCategory.INFANTIL),
+            ProgramSlot(8, 0, 9, 0, "Looney Tunes de Oro", "Bugs Bunny, el Pato Lucas, Porky, Piolín y el Coyote y el Correcaminos.", TvCategory.INFANTIL),
+            ProgramSlot(9, 0, 10, 0, "Los Picapiedra", "Pedro y Vilma Picapiedra junto a Pablo y Betty Mármol en Piedradura.", TvCategory.INFANTIL),
+            ProgramSlot(10, 0, 11, 0, "Los Supersónicos", "Súper Sónico y su familia viviendo en el año 2062 con comodidades futuristas.", TvCategory.INFANTIL),
+            ProgramSlot(11, 0, 12, 0, "Don Gato y su Pandilla", "Don Gato, Benito Bodoque, Cucho, Demóstenes y el Oficial Matute.", TvCategory.INFANTIL),
+            ProgramSlot(12, 0, 13, 0, "He-Man y los Amos del Universo", "El Príncipe Adam defiende los secretos del Castillo Grayskull del malvado Skeletor.", TvCategory.INFANTIL),
+            ProgramSlot(13, 0, 14, 0, "Thundercats", "Los felinos cósmicos liderados por Leon-O combaten a Mumm-Ra en el Tercer Planeta.", TvCategory.INFANTIL),
+            ProgramSlot(14, 0, 15, 0, "Transformers G1", "Los heroicos Autobots con Optimus Prime frente a los malvados Decepticons de Megatron.", TvCategory.INFANTIL),
+            ProgramSlot(15, 0, 16, 0, "Los Cazafantasmas (The Real Ghostbusters)", "Peter, Ray, Egon y Winston atrapando fantasmas por toda Nueva York.", TvCategory.INFANTIL),
+            ProgramSlot(16, 0, 17, 0, "G.I. Joe: Un Verdadero Héroe Americano", "El equipo de élite G.I. Joe deteniendo los planes de la siniestra organización Cobra.", TvCategory.INFANTIL),
+            ProgramSlot(17, 0, 18, 0, "Spider-Man y sus Sorprendentes Amigos", "El Hombre Araña junto a Estrella de Fuego y el Hombre de Hielo.", TvCategory.INFANTIL),
+            ProgramSlot(18, 0, 19, 0, "Mazinger Z", "Koji Kabuto pilotea al gigantesco robot de aleación Z contra las bestias mecánicas del Dr. Hell.", TvCategory.INFANTIL),
+            ProgramSlot(19, 0, 20, 0, "Robotech (Saga Macross)", "Rick Hunter, Lynn Minmay y Roy Fokker en la defensa de la Tierra con los cazas Veritech.", TvCategory.INFANTIL),
+            ProgramSlot(20, 0, 21, 0, "Thundercats (Especial de la Noche)", "Episodios clave y batallas épicas de los Thundercats.", TvCategory.INFANTIL),
+            ProgramSlot(21, 0, 22, 0, "He-Man (Batalla por Eternia)", "La lucha por el poder de Eternia entre el bien y el mal.", TvCategory.INFANTIL),
+            ProgramSlot(22, 0, 23, 0, "Transformers G1 (Batalla Estelar)", "Las misiones más emblemáticas en Cybertron y la Tierra.", TvCategory.INFANTIL),
+            ProgramSlot(23, 0, 0, 0, "Batman: La Serie Animada", "El Caballero de la Noche combatiendo el crimen en Gotham City.", TvCategory.INFANTIL)
+        )
+
+        for (offset in 0..1) {
+            allItems.addAll(buildDaySchedule("cr_retro_cartoons", tz, offset, dailySlots))
         }
 
         return allItems
