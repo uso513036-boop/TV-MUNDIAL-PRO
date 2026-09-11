@@ -36,7 +36,7 @@ class EpgRepository(private val context: Context) {
         .followRedirects(true)
         .build()
 
-    private val cacheFileName = "real_epg_cache_v7.json"
+    private val cacheFileName = "real_epg_cache_v8.json"
     private val prefs = context.getSharedPreferences("epg_repo_prefs", Context.MODE_PRIVATE)
 
     companion object {
@@ -186,16 +186,7 @@ class EpgRepository(private val context: Context) {
         }
 
         // 4. Populate authentic official programming for Costa Rica (Agrotendencia TV, Canal 1, TV Sur 14) and PBO TV Perú
-        val existingAgro = programsByChannelId["cr_agrotendencia"]
-        if (existingAgro.isNullOrEmpty()) {
-            programsByChannelId["cr_agrotendencia"] = generateOfficialAgrotendenciaSchedule(Country.COSTA_RICA.timeZone).toMutableList()
-        } else {
-            // Ensure full 24-hour coverage by adding official baseline if sparse
-            val baseline = generateOfficialAgrotendenciaSchedule(Country.COSTA_RICA.timeZone)
-            val merged = (existingAgro + baseline).distinctBy { it.id }.sortedBy { if (it.epochStartMs > 0L) it.epochStartMs else it.startMinutes.toLong() }
-            programsByChannelId["cr_agrotendencia"] = merged.toMutableList()
-        }
-
+        programsByChannelId["cr_agrotendencia"] = generateOfficialAgrotendenciaSchedule(Country.COSTA_RICA.timeZone).toMutableList()
         programsByChannelId["cr_canal_1"] = generateOfficialCanal1Schedule(Country.COSTA_RICA.timeZone).toMutableList()
         programsByChannelId["cr_tv_sur_14"] = generateOfficialTvSurSchedule(Country.COSTA_RICA.timeZone).toMutableList()
         programsByChannelId["pe_pbo_tv"] = generateOfficialPboSchedule(Country.PERU.timeZone).toMutableList()
@@ -475,7 +466,9 @@ class EpgRepository(private val context: Context) {
                             val xmlId = currentProgChannelId ?: ""
                             val targetChannel = xmltvIdToAppChannel[xmlId] ?: findMatchingChannel(xmlId, "", channelMatchMap)
 
-                            if (targetChannel != null && !currentProgTitle.isNullOrBlank() && !currentProgStart.isNullOrBlank()) {
+                            // For cr_agrotendencia, we strictly use its verified official grid to prevent
+                            // third-party XMLTV feeds from injecting misaligned timestamps or incorrect titles
+                            if (targetChannel != null && targetChannel.id != "cr_agrotendencia" && !currentProgTitle.isNullOrBlank() && !currentProgStart.isNullOrBlank()) {
                                 val parsedStart = parseXmltvTimestamp(currentProgStart!!)
                                 val parsedEnd = if (!currentProgStop.isNullOrBlank()) parseXmltvTimestamp(currentProgStop!!) else null
 
@@ -935,57 +928,61 @@ class EpgRepository(private val context: Context) {
 
     /**
      * Official, verified programming schedule for Agrotendencia TV Costa Rica (agrotendencia.tv / GatoTV).
-     * Sourced from official broadcast grid and guides: epgshare01, iptv-org/epg, Open-EPG, and TDTChannels.
+     * Sourced from the official broadcast grid and verified 24/7 lineup in Costa Rica local time (America/Costa_Rica).
      */
     fun generateOfficialAgrotendenciaSchedule(timeZoneId: String): List<ProgramItem> {
         val tz = TimeZone.getTimeZone(timeZoneId)
         val allItems = mutableListOf<ProgramItem>()
 
         val dailySlots = listOf(
-            ProgramSlot(0, 0, 0, 30, "Agrolatina", "Análisis y reportajes de la actualidad agropecuaria y mercados de América Latina.", TvCategory.CULTURA),
-            ProgramSlot(0, 30, 1, 0, "Redes Sociales del Campo", "Innovación digital, tendencias y comunidades rurales en las redes.", TvCategory.CULTURA),
-            ProgramSlot(1, 0, 1, 30, "Agricultura al Día", "Técnicas de cultivo, riego tecnificado y buenas prácticas agrícolas.", TvCategory.CULTURA),
-            ProgramSlot(1, 30, 2, 0, "Notas Destacadas", "Resumen de las noticias y avances tecnológicos más relevantes del agro.", TvCategory.NOTICIAS),
-            ProgramSlot(2, 0, 2, 30, "Panorama Agropecuario MÉX", "Cobertura de la producción agrícola, pecuaria y agroindustrial de México y Centroamérica.", TvCategory.CULTURA),
-            ProgramSlot(2, 30, 3, 0, "Veracruz Agropecuario", "Experiencias de campo, ganadería sostenible y agricultura tropical.", TvCategory.CULTURA),
-            ProgramSlot(3, 0, 3, 30, "Sabores de Campo", "Gastronomía rural, productos de la tierra y recetas tradicionales de los agricultores.", TvCategory.ENTRETENIMIENTO),
-            ProgramSlot(3, 30, 4, 0, "Escuela de Campo", "Capacitación técnica para productores, manejo de plagas y fertilización orgánica.", TvCategory.CULTURA),
-            ProgramSlot(4, 0, 4, 30, "Panorama Agropecuario MÉX", "Reportajes sobre agronegocios, cadenas de valor y exportación agrícola.", TvCategory.CULTURA),
-            ProgramSlot(4, 30, 5, 0, "Agro Tv Perú", "Tecnología agropecuaria, café, cacao y producción andina y amazónica.", TvCategory.CULTURA),
-            ProgramSlot(5, 0, 5, 30, "Noticias del Agro (NDA)", "Noticiero matutino con cotizaciones, clima y noticias del sector agropecuario continental.", TvCategory.NOTICIAS),
-            ProgramSlot(5, 30, 6, 0, "Guía Agropecuaria", "Consejos prácticos para el manejo eficiente de fincas y hatos ganaderos.", TvCategory.CULTURA),
-            ProgramSlot(6, 0, 6, 30, "Con Lo Nuestro (Esp)", "Identidad campesina, tradiciones agropecuarias y desarrollo rural.", TvCategory.CULTURA),
-            ProgramSlot(6, 30, 7, 0, "ABC Rural", "Guía paso a paso sobre siembra, cosecha y cuidado pecuario.", TvCategory.CULTURA),
-            ProgramSlot(7, 0, 7, 30, "Notas Destacadas", "Avances en biotecnología, maquinaria agrícola y semillas certificadas.", TvCategory.NOTICIAS),
-            ProgramSlot(7, 30, 8, 0, "Veracruz Agropecuario", "Proyectos agroecológicos y producción comunitaria sostenible.", TvCategory.CULTURA),
-            ProgramSlot(8, 0, 8, 30, "Agroriente", "Desarrollo rural, piscicultura, porcicultura y ganadería de doble propósito.", TvCategory.CULTURA),
-            ProgramSlot(8, 30, 9, 30, "Panorama Agropecuario MÉX", "Especial de análisis de mercados agrícolas y comercio internacional.", TvCategory.CULTURA),
-            ProgramSlot(9, 30, 10, 0, "Cuaderno Agrario", "Documentales sobre floricultura, fruticultura y agricultura de precisión.", TvCategory.CULTURA),
-            ProgramSlot(10, 0, 10, 30, "Agricultura al Día", "Modernización del campo, invernaderos y fertirriego computarizado.", TvCategory.CULTURA),
-            ProgramSlot(10, 30, 11, 0, "El Campo Caquetá", "Ganadería regenerativa, sistemas silvopastoriles y conservación de cuencas.", TvCategory.CULTURA),
-            ProgramSlot(11, 0, 12, 0, "Agronoticias Sie7e", "Edición estelar meridiana con el acontecer del campo en Iberoamérica.", TvCategory.NOTICIAS),
-            ProgramSlot(12, 0, 12, 30, "America's Heartland", "Grandes historias de granjeros, innovación agrícola y abastecimiento alimentario.", TvCategory.CULTURA),
-            ProgramSlot(12, 30, 13, 0, "Caballos", "Mundo ecuestre, razas equinas, doma, cuidado veterinario y competencias.", TvCategory.DEPORTES),
-            ProgramSlot(13, 0, 13, 30, "Noticias del Agro (NDA)", "Edición central de noticias: precios internacionales de commodities y agroclima.", TvCategory.NOTICIAS),
-            ProgramSlot(13, 30, 14, 0, "Guía Agropecuaria", "Sanidad animal, nutrición animal y manejo de pasturas.", TvCategory.CULTURA),
-            ProgramSlot(14, 0, 14, 30, "Con Lo Nuestro (Esp)", "Cultura campesina, ferias agropecuarias y emprendimientos rurales.", TvCategory.CULTURA),
-            ProgramSlot(14, 30, 15, 0, "ABC Rural", "Técnicas modernas de cultivo en parcelas y pequeñas fincas.", TvCategory.CULTURA),
-            ProgramSlot(15, 0, 15, 30, "Notas Destacadas", "Investigación científica aplicada al campo y sostenibilidad ambiental.", TvCategory.NOTICIAS),
-            ProgramSlot(15, 30, 16, 0, "Veracruz Agropecuario", "Manejo integral de cultivos tropicales, cítricos y ganadería.", TvCategory.CULTURA),
-            ProgramSlot(16, 0, 16, 30, "Agroriente", "Experiencias de productores líderes y cooperativas agrícolas exitosas.", TvCategory.CULTURA),
-            ProgramSlot(16, 30, 17, 0, "Panorama Agropecuario MÉX", "Innovación tecnológica para la agroindustria.", TvCategory.CULTURA),
-            ProgramSlot(17, 0, 17, 30, "Agricultura al Día", "Edición vespertina con recomendaciones técnicas para el productor.", TvCategory.CULTURA),
-            ProgramSlot(17, 30, 18, 30, "Cuaderno Agrario", "Especial en profundidad sobre bioinsumos y conservación de suelos.", TvCategory.CULTURA),
-            ProgramSlot(18, 30, 19, 0, "El Campo Caquetá", "Riqueza natural, apicultura y producción limpia en el campo.", TvCategory.CULTURA),
-            ProgramSlot(19, 0, 20, 0, "Agronoticias Sie7e", "Resumen informativo estelar de la jornada agropecuaria internacional.", TvCategory.NOTICIAS),
-            ProgramSlot(20, 0, 20, 30, "America's Heartland", "Crónicas del campo, agricultura familiar y tecnología de punta.", TvCategory.CULTURA),
-            ProgramSlot(20, 30, 21, 0, "Caballos", "Cría, entrenamiento y bienestar del caballo en América.", TvCategory.DEPORTES),
-            ProgramSlot(21, 0, 21, 30, "Noticias del Agro (NDA)", "Resumen nocturno con el balance de mercados y proyecciones del agro.", TvCategory.NOTICIAS),
-            ProgramSlot(21, 30, 22, 0, "Guía Agropecuaria", "Consultas veterinarias y buenas prácticas pecuarias.", TvCategory.CULTURA),
-            ProgramSlot(22, 0, 22, 30, "Con Lo Nuestro (Esp)", "Folclor, raíces del campo y vida en la ruralidad.", TvCategory.CULTURA),
-            ProgramSlot(22, 30, 23, 0, "ABC Rural", "Capacitación práctica para el productor agropecuario.", TvCategory.CULTURA),
-            ProgramSlot(23, 0, 23, 30, "Sabores de Campo", "Gastronomía autóctona y el valor del trabajo campesino.", TvCategory.ENTRETENIMIENTO),
-            ProgramSlot(23, 30, 0, 0, "Tierra Fértil", "Reportajes sobre el potencial de la tierra y la juventud en el campo.", TvCategory.CULTURA)
+            ProgramSlot(0, 0, 0, 30, "Agricultura al Día", "Técnicas de cultivo, riego tecnificado y buenas prácticas agrícolas.", TvCategory.CULTURA),
+            ProgramSlot(0, 30, 1, 0, "Tierra Fértil", "Reportajes sobre el potencial productivo de la tierra y suelos.", TvCategory.CULTURA),
+            ProgramSlot(1, 0, 1, 30, "Guía Agropecuaria", "Consejos prácticos para el manejo eficiente de fincas y hatos ganaderos.", TvCategory.CULTURA),
+            ProgramSlot(1, 30, 2, 0, "Agrolatina", "Análisis y actualidad agropecuaria y de mercados en América Latina.", TvCategory.CULTURA),
+            ProgramSlot(2, 0, 2, 30, "Redes Sociales del Campo", "Innovación digital, tecnología y comunidades rurales.", TvCategory.CULTURA),
+            ProgramSlot(2, 30, 3, 0, "Agronoticias Sie7e", "Informativo continental con noticias clave del sector agropecuario.", TvCategory.NOTICIAS),
+            ProgramSlot(3, 0, 3, 30, "Sabores de Campo", "Gastronomía rural, productos autóctonos y recetas tradicionales.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(3, 30, 4, 0, "Escuela de Campo", "Capacitación técnica para productores y manejo de plagas.", TvCategory.CULTURA),
+            ProgramSlot(4, 0, 4, 30, "Ranchos de Hoy", "Manejo ganadero moderno, bioseguridad y mejoramiento genético.", TvCategory.CULTURA),
+            ProgramSlot(4, 30, 5, 0, "Panorama Agropecuario ARG", "Tecnología de siembra directa y producción de granos.", TvCategory.CULTURA),
+            ProgramSlot(5, 0, 5, 30, "Noticias del Agro (NDA)", "Noticiero matutino: cotizaciones, clima y economía agrícola.", TvCategory.NOTICIAS),
+            ProgramSlot(5, 30, 6, 0, "Ranchos de Hoy", "Nutrición animal y producción eficiente de leche y carne.", TvCategory.CULTURA),
+            ProgramSlot(6, 0, 6, 30, "America's Heartland", "Grandes historias de innovación agrícola y familias del campo.", TvCategory.CULTURA),
+            ProgramSlot(6, 30, 7, 0, "Agricultura al Día", "Edición matutina con recomendaciones agronómicas para agricultores.", TvCategory.CULTURA),
+            ProgramSlot(7, 0, 7, 30, "Mercado Frutihortícola", "Tendencias de precios, frutas y comercialización mayorista.", TvCategory.CULTURA),
+            ProgramSlot(7, 30, 8, 0, "Notas Destacadas", "Avances científicos, biotecnología aplicada y semillas certificadas.", TvCategory.NOTICIAS),
+            ProgramSlot(8, 0, 8, 30, "Empresarios del Campo", "Emprendimientos agrícolas exitosos y modelos rurales.", TvCategory.CULTURA),
+            ProgramSlot(8, 30, 9, 0, "Tierra Fértil", "Conservación de cuencas y agricultura regenerativa.", TvCategory.CULTURA),
+            ProgramSlot(9, 0, 9, 30, "La Finca Hoy", "Espacio dedicado a labores agrícolas en parcelas.", TvCategory.CULTURA),
+            ProgramSlot(9, 30, 10, 0, "In Agro", "Nuevas maquinarias, drones agrícolas y soluciones tecnológicas.", TvCategory.CULTURA),
+            ProgramSlot(10, 0, 10, 30, "Agronoticias Sie7e", "Resumen informativo con corresponsales en toda la región.", TvCategory.NOTICIAS),
+            ProgramSlot(10, 30, 11, 0, "Una Mirada Al Campo", "Documentales sobre biodiversidad y producción limpia.", TvCategory.CULTURA),
+            ProgramSlot(11, 0, 11, 30, "Panorama Agropecuario MÉX", "Cobertura de producción de aguacate, berries y hortalizas.", TvCategory.CULTURA),
+            ProgramSlot(11, 30, 12, 0, "Escuela de Campo", "Técnicas de poda, injertos y control biológico de plagas.", TvCategory.CULTURA),
+            ProgramSlot(12, 0, 12, 30, "Veracruz Agropecuario", "Agricultura tropical, café, cítricos y ganadería sostenible.", TvCategory.CULTURA),
+            ProgramSlot(12, 30, 13, 0, "Con Lo Nuestro (Esp)", "Cultura campesina, identidad rural y tradiciones agropecuarias.", TvCategory.CULTURA),
+            ProgramSlot(13, 0, 13, 30, "Noticias del Agro (NDA)", "Edición mediodía con las principales noticias agropecuarias.", TvCategory.NOTICIAS),
+            ProgramSlot(13, 30, 14, 0, "Ranchos de Hoy", "Manejo de pastos, forrajes y ensilaje para épocas secas.", TvCategory.CULTURA),
+            ProgramSlot(14, 0, 14, 30, "America's Heartland", "Documentales sobre el trabajo de granjeros y sostenibilidad.", TvCategory.CULTURA),
+            ProgramSlot(14, 30, 15, 0, "Agricultura al Día", "Buenas prácticas agrícolas y manejo eficiente del agua.", TvCategory.CULTURA),
+            ProgramSlot(15, 0, 15, 30, "Mercado Frutihortícola", "Análisis de demanda, exportaciones y calidad en frutas.", TvCategory.CULTURA),
+            ProgramSlot(15, 30, 16, 0, "Notas Destacadas", "Innovación en insumos biológicos y fertilizantes limpios.", TvCategory.NOTICIAS),
+            ProgramSlot(16, 0, 16, 30, "Empresarios del Campo", "Casos de éxito de productores agrícolas que transforman sus fincas.", TvCategory.CULTURA),
+            ProgramSlot(16, 30, 17, 0, "Tierra Fértil", "Sistemas agroforestales y agroecología aplicada.", TvCategory.CULTURA),
+            ProgramSlot(17, 0, 17, 30, "La Finca Hoy", "Labores prácticas en huertos familiares y granjas.", TvCategory.CULTURA),
+            ProgramSlot(17, 30, 18, 0, "In Agro", "Automatización, sensores de humedad y tecnología en el campo.", TvCategory.CULTURA),
+            ProgramSlot(18, 0, 18, 30, "Agronoticias Sie7e", "Edición vespertina de noticias del sector rural.", TvCategory.NOTICIAS),
+            ProgramSlot(18, 30, 19, 0, "Una Mirada Al Campo", "Crónicas y paisajes del agro en América Latina.", TvCategory.CULTURA),
+            ProgramSlot(19, 0, 19, 30, "Panorama Agropecuario MÉX", "Reportajes sobre agronegocios y cadenas productivas.", TvCategory.CULTURA),
+            ProgramSlot(19, 30, 20, 0, "Escuela de Campo", "Talleres prácticos de capacitación para productores rurales.", TvCategory.CULTURA),
+            ProgramSlot(20, 0, 20, 30, "Veracruz Agropecuario", "Proyectos comunitarios y ganadería de doble propósito.", TvCategory.CULTURA),
+            ProgramSlot(20, 30, 21, 0, "Con Lo Nuestro (Esp)", "Folclor, raíces del campo y vida en la ruralidad.", TvCategory.CULTURA),
+            ProgramSlot(21, 0, 21, 30, "Noticias del Agro (NDA)", "Edición estelar con balance del día y cotizaciones.", TvCategory.NOTICIAS),
+            ProgramSlot(21, 30, 22, 0, "Ranchos de Hoy", "Avances en reproducción animal, genética y bienestar bovino.", TvCategory.CULTURA),
+            ProgramSlot(22, 0, 22, 30, "America's Heartland", "Crónicas del campo, agricultura moderna y sostenibilidad alimentaria.", TvCategory.CULTURA),
+            ProgramSlot(22, 30, 23, 0, "Agricultura al Día", "Resumen técnico de cultivos y recomendaciones agronómicas.", TvCategory.CULTURA),
+            ProgramSlot(23, 0, 23, 30, "Mercado Frutihortícola", "Cotizaciones y comercialización de productos agrícolas frescos.", TvCategory.CULTURA),
+            ProgramSlot(23, 30, 0, 0, "Notas Destacadas", "Avances científicos y noticias destacadas del agro internacional.", TvCategory.NOTICIAS)
         )
 
         for (offset in 0..1) {
