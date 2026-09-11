@@ -313,7 +313,7 @@ fun TvMundialApp(
                     )
                 }
 
-                // Category Filter Chips at the top (where countries were before)
+                // Category Filter Chips at the top (where countries were before - excluding "Todos")
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -322,11 +322,17 @@ fun TvMundialApp(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TvCategory.values().forEach { category ->
+                    TvCategory.values().filter { it != TvCategory.TODOS }.forEach { category ->
                         val isSelected = uiState.selectedCategory == category
                         FilterChip(
                             selected = isSelected,
-                            onClick = { viewModel.setCategoryFilter(category) },
+                            onClick = {
+                                if (isSelected) {
+                                    viewModel.setCategoryFilter(TvCategory.TODOS)
+                                } else {
+                                    viewModel.setCategoryFilter(category)
+                                }
+                            },
                             label = {
                                 Text(
                                     text = category.displayName,
@@ -440,8 +446,6 @@ fun TvMundialApp(
                         onToggleFavorite = { viewModel.toggleFavorite(it) },
                         selectedCountry = uiState.selectedCountry,
                         onSelectCountry = { viewModel.setCountryFilter(it) },
-                        onlyFavorites = uiState.onlyFavorites,
-                        onToggleOnlyFavorites = { viewModel.setOnlyFavorites(it) },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -486,8 +490,6 @@ fun TvMundialApp(
                         onToggleFavorite = { viewModel.toggleFavorite(it) },
                         selectedCountry = uiState.selectedCountry,
                         onSelectCountry = { viewModel.setCountryFilter(it) },
-                        onlyFavorites = uiState.onlyFavorites,
-                        onToggleOnlyFavorites = { viewModel.setOnlyFavorites(it) },
                         modifier = Modifier.fillMaxSize()
                     )
                 }

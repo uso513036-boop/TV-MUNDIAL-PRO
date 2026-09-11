@@ -58,8 +58,6 @@ fun ChannelListView(
     onToggleFavorite: (Channel) -> Unit,
     selectedCountry: Country?,
     onSelectCountry: (Country?) -> Unit,
-    onlyFavorites: Boolean = false,
-    onToggleOnlyFavorites: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var currentEpochMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -94,9 +92,8 @@ fun ChannelListView(
             // Todos los países
             CountryFilterPill(
                 text = "Todos 🌐",
-                isSelected = selectedCountry == null && !onlyFavorites,
+                isSelected = selectedCountry == null,
                 onClick = {
-                    onToggleOnlyFavorites(false)
                     onSelectCountry(null)
                 }
             )
@@ -104,9 +101,8 @@ fun ChannelListView(
             // Perú
             CountryFilterPill(
                 text = "Perú 🇵🇪",
-                isSelected = selectedCountry == Country.PERU && !onlyFavorites,
+                isSelected = selectedCountry == Country.PERU,
                 onClick = {
-                    onToggleOnlyFavorites(false)
                     onSelectCountry(Country.PERU)
                 }
             )
@@ -114,19 +110,9 @@ fun ChannelListView(
             // Costa Rica
             CountryFilterPill(
                 text = "Costa Rica 🇨🇷",
-                isSelected = selectedCountry == Country.COSTA_RICA && !onlyFavorites,
+                isSelected = selectedCountry == Country.COSTA_RICA,
                 onClick = {
-                    onToggleOnlyFavorites(false)
                     onSelectCountry(Country.COSTA_RICA)
-                }
-            )
-
-            // Favoritos
-            CountryFilterPill(
-                text = "★ Favoritos",
-                isSelected = onlyFavorites,
-                onClick = {
-                    onToggleOnlyFavorites(!onlyFavorites)
                 }
             )
         }
