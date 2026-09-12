@@ -71,12 +71,37 @@ class EpgRepository(private val context: Context) {
     }
 
     /**
-     * Checks if cached EPG data is still fresh (less than 24h old).
+     * Checks if cached EPG data is still fresh (less than 4h old and containing future programs).
      */
     fun isCacheValid(): Boolean {
         val lastSync = prefs.getLong(PREF_KEY_LAST_SYNC, 0L)
         val file = File(context.filesDir, cacheFileName)
-        return file.exists() && (System.currentTimeMillis() - lastSync) < CACHE_MAX_AGE_MS
+        val now = System.currentTimeMillis()
+        if (!file.exists() || (now - lastSync) >= 4 * 60 * 60 * 1000L) {
+            return false
+        }
+        return try {
+            val json = JSONObject(file.readText())
+            val channelsObj = json.optJSONObject("channels") ?: return false
+            val keys = channelsObj.keys()
+            var valid = false
+            while (keys.hasNext()) {
+                val key = keys.next()
+                val arr = channelsObj.optJSONArray(key) ?: continue
+                for (i in 0 until arr.length()) {
+                    val p = arr.optJSONObject(i) ?: continue
+                    val endMs = p.optLong("epochEndMs", 0L)
+                    if (endMs > now) {
+                        valid = true
+                        break
+                    }
+                }
+                if (valid) break
+            }
+            valid
+        } catch (e: Exception) {
+            false
+        }
     }
 
     fun getLastSyncTimestamp(): Long {
@@ -194,7 +219,9 @@ class EpgRepository(private val context: Context) {
         }
 
         // 4. Populate authentic official programming for Costa Rica (Agrotendencia TV, VM Latino, Canal 1, TV Sur 14, Retrox TV, Retrox Plus, Retro Cartoons) and PBO TV Perú
-        programsByChannelId["cr_agrotendencia"] = generateOfficialAgrotendenciaSchedule(Country.COSTA_RICA.timeZone).toMutableList()
+        if (programsByChannelId["cr_agrotendencia"].isNullOrEmpty()) {
+            programsByChannelId["cr_agrotendencia"] = generateOfficialAgrotendenciaSchedule(Country.COSTA_RICA.timeZone).toMutableList()
+        }
         programsByChannelId["cr_vm_latino"] = generateOfficialVmLatinoSchedule(Country.COSTA_RICA.timeZone).toMutableList()
         programsByChannelId["cr_retrox_tv"] = generateOfficialRetroxSchedule(Country.COSTA_RICA.timeZone).toMutableList()
         programsByChannelId["cr_retrox_plus"] = generateOfficialRetroxPlusSchedule(Country.COSTA_RICA.timeZone).toMutableList()
@@ -478,16 +505,20 @@ class EpgRepository(private val context: Context) {
                             val xmlId = currentProgChannelId ?: ""
                             val targetChannel = xmltvIdToAppChannel[xmlId] ?: findMatchingChannel(xmlId, "", channelMatchMap)
 
-                            // For cr_agrotendencia, cr_vm_latino, and Retrox channels, we strictly use their verified official grid to prevent
+                            // For cr_vm_latino and Retrox channels, we strictly use their verified official grid to prevent
                             // third-party XMLTV feeds from injecting misaligned timestamps or incorrect titles
                             val isProtectedGrid = targetChannel != null && (
-                                targetChannel.id == "cr_agrotendencia" ||
                                 targetChannel.id == "cr_vm_latino" ||
                                 targetChannel.id == "cr_retrox_tv" ||
                                 targetChannel.id == "cr_retrox_plus" ||
                                 targetChannel.id == "cr_retro_cartoons"
                             )
-                            if (targetChannel != null && !isProtectedGrid && !currentProgTitle.isNullOrBlank() && !currentProgStart.isNullOrBlank()) {
+                            // If Trivu TV or RPP already has official listings from direct Movistar Play PE scraper, don't overwrite with obsolete XMLTV
+                            val isAlreadyPopulatedFromDirectApi = targetChannel != null &&
+                                (targetChannel.id == "pe_trivu_tv" || targetChannel.id == "pe_rpp_tv") &&
+                                outPrograms[targetChannel.id]?.isNotEmpty() == true
+
+                            if (targetChannel != null && !isProtectedGrid && !isAlreadyPopulatedFromDirectApi && !currentProgTitle.isNullOrBlank() && !currentProgStart.isNullOrBlank()) {
                                 val parsedStart = parseXmltvTimestamp(currentProgStart!!)
                                 val parsedEnd = if (!currentProgStop.isNullOrBlank()) parseXmltvTimestamp(currentProgStop!!) else null
 
@@ -971,12 +1002,11 @@ class EpgRepository(private val context: Context) {
             ProgramSlot(7, 0, 7, 30, "Mercado Frutihortícola", "Tendencias de precios, frutas y comercialización mayorista.", TvCategory.CULTURA),
             ProgramSlot(7, 30, 8, 0, "Notas Destacadas", "Avances científicos, biotecnología aplicada y semillas certificadas.", TvCategory.NOTICIAS),
             ProgramSlot(8, 0, 8, 30, "Empresarios del Campo", "Emprendimientos agrícolas exitosos y modelos rurales.", TvCategory.CULTURA),
-            ProgramSlot(8, 30, 9, 0, "Tierra Fértil", "Conservación de cuencas y agricultura regenerativa.", TvCategory.CULTURA),
-            ProgramSlot(9, 0, 9, 30, "La Finca Hoy", "Espacio dedicado a labores agrícolas en parcelas.", TvCategory.CULTURA),
-            ProgramSlot(9, 30, 10, 0, "In Agro", "Nuevas maquinarias, drones agrícolas y soluciones tecnológicas.", TvCategory.CULTURA),
-            ProgramSlot(10, 0, 10, 30, "Agronoticias Sie7e", "Resumen informativo con corresponsales en toda la región.", TvCategory.NOTICIAS),
-            ProgramSlot(10, 30, 11, 0, "Una Mirada Al Campo", "Documentales sobre biodiversidad y producción limpia.", TvCategory.CULTURA),
-            ProgramSlot(11, 0, 11, 30, "Panorama Agropecuario MÉX", "Cobertura de producción de aguacate, berries y hortalizas.", TvCategory.CULTURA),
+            ProgramSlot(8, 30, 9, 0, "El Campo Caquetá", "Desarrollo rural, ganadería y producción sostenible.", TvCategory.CULTURA),
+            ProgramSlot(9, 0, 9, 30, "Veracruz Agropecuario", "Agricultura tropical, café, cítricos y ganadería sostenible.", TvCategory.CULTURA),
+            ProgramSlot(9, 30, 10, 0, "Sabores de Campo", "Gastronomía rural, productos autóctonos y recetas tradicionales.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(10, 0, 10, 30, "Cuaderno Agrario", "Actualidad agrícola, investigación aplicada y gestión de fincas.", TvCategory.CULTURA),
+            ProgramSlot(10, 30, 11, 30, "Agroriente", "Enfoque en cultivos de exportación y tecnología del campo.", TvCategory.CULTURA),
             ProgramSlot(11, 30, 12, 0, "Escuela de Campo", "Técnicas de poda, injertos y control biológico de plagas.", TvCategory.CULTURA),
             ProgramSlot(12, 0, 12, 30, "Veracruz Agropecuario", "Agricultura tropical, café, cítricos y ganadería sostenible.", TvCategory.CULTURA),
             ProgramSlot(12, 30, 13, 0, "Con Lo Nuestro (Esp)", "Cultura campesina, identidad rural y tradiciones agropecuarias.", TvCategory.CULTURA),

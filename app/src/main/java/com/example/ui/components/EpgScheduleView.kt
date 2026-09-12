@@ -39,7 +39,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,7 +58,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.Channel
 import com.example.model.ProgramItem
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import java.util.Calendar
+import java.util.TimeZone
 
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.CircularProgressIndicator
@@ -71,14 +77,23 @@ fun EpgScheduleView(
     isEpgSyncing: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-        // Current simulated minute of day for live progress
-    val calendar = remember { Calendar.getInstance() }
-    val currentMinutes = remember {
-        calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+    // Current minute of day and epoch time synced with channel's official timezone
+    var currentEpochMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var currentMinutes by remember(channel.country.timeZone) {
+        val cal = Calendar.getInstance(TimeZone.getTimeZone(channel.country.timeZone))
+        mutableIntStateOf(cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE))
     }
-    val currentEpochMs = remember { System.currentTimeMillis() }
 
-    val currentProgram = remember(channel, currentMinutes) {
+    LaunchedEffect(channel.country.timeZone) {
+        while (isActive) {
+            currentEpochMs = System.currentTimeMillis()
+            val cal = Calendar.getInstance(TimeZone.getTimeZone(channel.country.timeZone))
+            currentMinutes = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+            delay(15_000L)
+        }
+    }
+
+    val currentProgram = remember(channel, currentMinutes, currentEpochMs) {
         channel.getCurrentProgram(currentMinutes, currentEpochMs)
     }
 

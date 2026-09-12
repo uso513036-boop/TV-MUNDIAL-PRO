@@ -109,10 +109,10 @@ fun VideoPlayerView(
 
     LaunchedEffect(channel.id) {
         while (true) {
-            val cal = Calendar.getInstance()
+            val cal = Calendar.getInstance(TimeZone.getTimeZone(channel.country.timeZone))
             currentTimeMinutes = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
             currentEpochMs = System.currentTimeMillis()
-            delay(30_000)
+            delay(15_000)
         }
     }
 
@@ -220,19 +220,19 @@ fun VideoPlayerView(
                     useController = false
                     setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
                     setEnableComposeSurfaceSyncWorkaround(true)
-                    PlayerView.switchTargetView(playerManager.getPlayer(), null, this)
+                    player = playerManager.getPlayer()
                     resizeMode = playbackState.resizeMode
                 }
             },
             update = { playerView ->
                 val activePlayer = playerManager.getPlayer()
                 if (playerView.player !== activePlayer) {
-                    PlayerView.switchTargetView(activePlayer, null, playerView)
+                    playerView.player = activePlayer
                 }
                 playerView.resizeMode = playbackState.resizeMode
             },
             onRelease = { playerView ->
-                PlayerView.switchTargetView(playerManager.getPlayer(), playerView, null)
+                playerView.player = null
             },
             modifier = Modifier.fillMaxSize()
         )

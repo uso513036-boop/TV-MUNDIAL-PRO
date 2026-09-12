@@ -18,9 +18,8 @@ object ChannelRepository {
                 shortName = "TV Perú",
                 country = Country.PERU,
                 category = TvCategory.CULTURA,
-                streamUrl = "http://bantel-cdn1.iptvperu.tv:1935/btnscrtn/tvperu.stream/playlist.m3u8",
+                streamUrl = "http://190.93.224.42/TV-PERU/index.m3u8",
                 backupStreamUrls = listOf(
-                    "http://190.93.224.42/TV-PERU/index.m3u8",
                     "https://live-evg11.tv360.bitel.com.pe/bitel/telelimaSRT/playlist.m3u8"
                 ),
                 logoText = "TVP",
@@ -36,10 +35,9 @@ object ChannelRepository {
                 shortName = "TV Perú Noticias",
                 country = Country.PERU,
                 category = TvCategory.NOTICIAS,
-                streamUrl = "http://bantel-cdn1.iptvperu.tv:1935/btnscrtn/tvperunoticias.stream/playlist.m3u8",
+                streamUrl = "http://190.93.224.42/TV-PERU-NOTICIAS/index.m3u8",
                 backupStreamUrls = listOf(
-                    "http://190.93.224.42/TV-PERU-NOTICIAS/index.m3u8",
-                    "http://bantel-cdn1.iptvperu.tv:1935/btnscrtn/tvperu.stream/playlist.m3u8"
+                    "http://190.93.224.42/TV-PERU/index.m3u8"
                 ),
                 logoText = "7.3",
                 brandColorHex = 0xFFB71C1C,
@@ -131,7 +129,7 @@ object ChannelRepository {
                 brandColorHex = 0xFF7C4DFF,
                 description = "Canal de entretenimiento, cultura pop, música y cine para el público joven.",
                 broadcastQuality = "HD 1080p",
-                epgAliases = listOf("CANAL.J.(Canal.J).pe", "TrivuTV.pe", "Trivu TV", "Trivu")
+                epgAliases = listOf("TrivuTV.pe", "Trivu TV", "Trivu", "TRIVU")
             ),
 
             // ==========================================

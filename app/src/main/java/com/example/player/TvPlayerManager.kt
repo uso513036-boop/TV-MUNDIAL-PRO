@@ -99,7 +99,7 @@ class TvPlayerManager(context: Context) {
     }
 
     fun playChannel(channel: Channel) {
-        if (currentChannel?.id == channel.id && _playbackState.value.isPlaying && !_playbackState.value.hasError) {
+        if (currentChannel?.id == channel.id && (_playbackState.value.isPlaying || _playbackState.value.isBuffering) && !_playbackState.value.hasError) {
             return
         }
         currentChannel = channel
@@ -118,15 +118,15 @@ class TvPlayerManager(context: Context) {
         )
 
         try {
-            player.stop()
-            player.clearMediaItems()
             val mediaItemBuilder = MediaItem.Builder().setUri(url)
             if (url.contains(".m3u8", ignoreCase = true)) {
                 mediaItemBuilder.setMimeType(MimeTypes.APPLICATION_M3U8)
             }
             val mediaItem = mediaItemBuilder.build()
-            player.setMediaItem(mediaItem)
-            player.prepare()
+            player.setMediaItem(mediaItem, true)
+            if (player.playbackState == Player.STATE_IDLE) {
+                player.prepare()
+            }
             player.play()
         } catch (e: Exception) {
             handlePlaybackError(null)

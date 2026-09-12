@@ -37,8 +37,8 @@ data class ProgramItem(
     val isRealEpg: Boolean = false
 ) {
     fun isCurrentlyAiring(currentMinutes: Int = -1, currentEpochMs: Long = System.currentTimeMillis()): Boolean {
-        if (epochStartMs > 0L && epochEndMs > 0L) {
-            return currentEpochMs in epochStartMs until epochEndMs
+        if (epochStartMs > 0L && epochEndMs > 0L && currentEpochMs in epochStartMs until epochEndMs) {
+            return true
         }
         if (currentMinutes >= 0) {
             return if (endMinutes > startMinutes) {
@@ -117,11 +117,11 @@ data class Channel(
         }
         if (epochMatch != null) return epochMatch
 
-        // 2. Check minute of day match if provided
-        if (currentMinutes >= 0) {
-            val minMatch = schedule.find { it.isCurrentlyAiring(currentMinutes, currentEpochMs) }
-            if (minMatch != null) return minMatch
-        }
+        // 2. Check minute of day match in channel's local time zone
+        val channelCal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone(country.timeZone))
+        val localMinutes = if (currentMinutes >= 0) currentMinutes else (channelCal.get(java.util.Calendar.HOUR_OF_DAY) * 60 + channelCal.get(java.util.Calendar.MINUTE))
+        val minMatch = schedule.find { it.isCurrentlyAiring(localMinutes, currentEpochMs) }
+        if (minMatch != null) return minMatch
 
         // Strictly return null if nothing is airing now. Do NOT invent or fallback to arbitrary programs!
         return null
@@ -144,6 +144,12 @@ data class Channel(
             // Find first program scheduled after now
             val upcoming = schedule.filter { it.epochStartMs > currentEpochMs }.minByOrNull { it.epochStartMs }
             if (upcoming != null) return upcoming
+
+            // Or by minute of day in channel's local time zone
+            val channelCal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone(country.timeZone))
+            val localMinutes = if (currentMinutes >= 0) currentMinutes else (channelCal.get(java.util.Calendar.HOUR_OF_DAY) * 60 + channelCal.get(java.util.Calendar.MINUTE))
+            val upcomingByMin = schedule.filter { it.startMinutes > localMinutes }.minByOrNull { it.startMinutes }
+            if (upcomingByMin != null) return upcomingByMin
         }
 
         // Strictly return null if no next program exists. Do NOT fallback!

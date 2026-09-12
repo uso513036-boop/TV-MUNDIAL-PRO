@@ -151,7 +151,7 @@ fun ChannelListView(
                     val isCurrent = selectedChannel?.id == channel.id
 
                     // Get current live program strictly using real verified EPG
-                    val currentProgram = channel.getCurrentProgram(currentMinutes, currentEpochMs)
+                    val currentProgram = channel.getCurrentProgram(currentEpochMs = currentEpochMs)
                     val hasRealProgram = channel.isRealEpg && currentProgram != null
                     val onAirProgramTitle = if (hasRealProgram) currentProgram!!.title else "Programación no disponible"
 
