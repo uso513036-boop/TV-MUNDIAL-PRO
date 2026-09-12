@@ -36,7 +36,7 @@ class EpgRepository(private val context: Context) {
         .followRedirects(true)
         .build()
 
-    private val cacheFileName = "real_epg_cache_v9.json"
+    private val cacheFileName = "real_epg_cache_v11.json"
     private val prefs = context.getSharedPreferences("epg_repo_prefs", Context.MODE_PRIVATE)
 
     companion object {
@@ -66,6 +66,7 @@ class EpgRepository(private val context: Context) {
             "pe_rpp_tv" to "lch2459",
             "pe_usmp_tv" to "lch4105",
             "pe_sol_tv" to "lch6473",
+            "pe_pbo_tv" to "lch7110",
             "pe_trivu_tv" to "lch7161"
         )
     }
@@ -202,9 +203,21 @@ class EpgRepository(private val context: Context) {
             Log.w(TAG, "Failed parsing Peru XMLTV from epgshare01/epg.lat: ${e.message}")
         }
 
-        // 3. Fetch Costa Rica EPG from epgshare01.online, GatoTV ripper, epg.lat & TDTChannels XMLTV
+        // 3. Fetch Costa Rica live broadcaster schedules directly from official sites
         val crChannels = channels.filter { it.country == Country.COSTA_RICA }
         val crMatchMap = buildChannelMatchMap(crChannels)
+        try {
+            fetchCanal1WebsiteSchedule(crChannels, programsByChannelId)
+        } catch (e: Exception) {
+            Log.w(TAG, "Canal 1 website scraper: ${e.message}")
+        }
+        try {
+            fetchTvSurWebsiteSchedule(crChannels, programsByChannelId)
+        } catch (e: Exception) {
+            Log.w(TAG, "TV Sur website scraper: ${e.message}")
+        }
+
+        // 4. Fetch Costa Rica EPG from epgshare01.online (Agrotendencia TV, Multimedios, etc.) & epg.lat XMLTV
         try {
             fetchAndParseXmltv(URL_CR_EPGSHARE, URL_CR_EPGLAT, Country.COSTA_RICA, crMatchMap, programsByChannelId)
         } catch (e: Exception) {
@@ -218,19 +231,38 @@ class EpgRepository(private val context: Context) {
             Log.w(TAG, "GatoTV/TDTChannels ripper check: ${e.message}")
         }
 
-        // 4. Populate authentic official programming for Costa Rica (Agrotendencia TV, VM Latino, Canal 1, TV Sur 14, Retrox TV, Retrox Plus, Retro Cartoons) and PBO TV Perú
+        // 5. Populate authentic official programming fallbacks for channels if not populated by API/web/XMLTV
         if (programsByChannelId["cr_agrotendencia"].isNullOrEmpty()) {
             programsByChannelId["cr_agrotendencia"] = generateOfficialAgrotendenciaSchedule(Country.COSTA_RICA.timeZone).toMutableList()
         }
-        programsByChannelId["cr_vm_latino"] = generateOfficialVmLatinoSchedule(Country.COSTA_RICA.timeZone).toMutableList()
-        programsByChannelId["cr_retrox_tv"] = generateOfficialRetroxSchedule(Country.COSTA_RICA.timeZone).toMutableList()
-        programsByChannelId["cr_retrox_plus"] = generateOfficialRetroxPlusSchedule(Country.COSTA_RICA.timeZone).toMutableList()
-        programsByChannelId["cr_retro_cartoons"] = generateOfficialRetroCartoonsSchedule(Country.COSTA_RICA.timeZone).toMutableList()
-        programsByChannelId["cr_canal_1"] = generateOfficialCanal1Schedule(Country.COSTA_RICA.timeZone).toMutableList()
-        programsByChannelId["cr_tv_sur_14"] = generateOfficialTvSurSchedule(Country.COSTA_RICA.timeZone).toMutableList()
-        programsByChannelId["pe_pbo_tv"] = generateOfficialPboSchedule(Country.PERU.timeZone).toMutableList()
+        if (programsByChannelId["cr_canal_1"].isNullOrEmpty()) {
+            programsByChannelId["cr_canal_1"] = generateOfficialCanal1Schedule(Country.COSTA_RICA.timeZone).toMutableList()
+        }
+        if (programsByChannelId["cr_tv_sur_14"].isNullOrEmpty()) {
+            programsByChannelId["cr_tv_sur_14"] = generateOfficialTvSurSchedule(Country.COSTA_RICA.timeZone).toMutableList()
+        }
+        if (programsByChannelId["pe_pbo_tv"].isNullOrEmpty()) {
+            programsByChannelId["pe_pbo_tv"] = generateOfficialPboSchedule(Country.PERU.timeZone).toMutableList()
+        }
+        if (programsByChannelId["cr_vm_latino"].isNullOrEmpty()) {
+            programsByChannelId["cr_vm_latino"] = generateOfficialVmLatinoSchedule(Country.COSTA_RICA.timeZone).toMutableList()
+        }
+        if (programsByChannelId["cr_retrox_tv"].isNullOrEmpty()) {
+            programsByChannelId["cr_retrox_tv"] = generateOfficialRetroxSchedule(Country.COSTA_RICA.timeZone).toMutableList()
+        }
+        if (programsByChannelId["cr_retrox_plus"].isNullOrEmpty()) {
+            programsByChannelId["cr_retrox_plus"] = generateOfficialRetroxPlusSchedule(Country.COSTA_RICA.timeZone).toMutableList()
+        }
+        if (programsByChannelId["cr_retro_cartoons"].isNullOrEmpty()) {
+            programsByChannelId["cr_retro_cartoons"] = generateOfficialRetroCartoonsSchedule(Country.COSTA_RICA.timeZone).toMutableList()
+        }
 
-        // 5. Save to local disk cache for fast daily reuse
+        // Sort all program lists by start timestamp
+        programsByChannelId.forEach { (_, progList) ->
+            progList.sortBy { it.epochStartMs }
+        }
+
+        // 6. Save to local disk cache for fast daily reuse
         saveToCache(programsByChannelId)
         prefs.edit().putLong(PREF_KEY_LAST_SYNC, System.currentTimeMillis()).apply()
 
@@ -284,9 +316,9 @@ class EpgRepository(private val context: Context) {
         outPrograms: MutableMap<String, MutableList<ProgramItem>>
     ) {
         val now = System.currentTimeMillis() / 1000L
-        val start = now - 3600L // 1 hour ago
-        val end = now + 86400L  // 24 hours ahead
-        val pids = PE_MOVISTAR_PIDS.values.joinToString(",")
+        val start = now - 6 * 3600L // 6 hours ago to ensure current airing program is fully present
+        val end = now + 48 * 3600L  // 48 hours ahead
+        val pids = (PE_MOVISTAR_PIDS.values + listOf("lch2212")).distinct().joinToString(",")
         val url = "https://contentapi-pe.cdn.telefonica.com/28/default/es-PE/schedules?fields=Pid,Title,Description,ChannelName,LiveChannelPid,Start,End&orderBy=START_TIME%3Aa&filteravailability=false&starttime=$start&endtime=$end&livechannelpids=$pids"
 
         val request = Request.Builder()
@@ -305,7 +337,12 @@ class EpgRepository(private val context: Context) {
         val root = JSONObject(jsonStr)
         val content = root.optJSONArray("Content") ?: return
 
-        val pidToChannelId = PE_MOVISTAR_PIDS.entries.associate { it.value.lowercase() to it.key }
+        val pidToChannelId = mutableMapOf<String, String>()
+        PE_MOVISTAR_PIDS.forEach { (channelId, pid) ->
+            pidToChannelId[pid.lowercase()] = channelId
+        }
+        pidToChannelId["lch2212"] = "pe_rpp_tv"
+
         val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault()).apply {
             timeZone = TimeZone.getTimeZone("America/Lima")
         }
@@ -356,6 +393,289 @@ class EpgRepository(private val context: Context) {
             list.add(program)
         }
         Log.d(TAG, "Telefonica/Movistar API: Loaded programs for ${outPrograms.size} Peru channels")
+    }
+
+    private fun fetchCanal1WebsiteSchedule(
+        crChannels: List<Channel>,
+        outPrograms: MutableMap<String, MutableList<ProgramItem>>
+    ) {
+        val targetChannel = crChannels.find { it.id == "cr_canal_1" } ?: return
+        val url = "https://canal1cr.com/programacion/"
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+            .build()
+
+        val response = httpClient.newCall(request).execute()
+        if (!response.isSuccessful) {
+            response.close()
+            Log.w(TAG, "Canal 1 web schedule returned HTTP ${response.code}")
+            return
+        }
+
+        val html = response.body?.string() ?: return
+        val tableMatch = Regex("<table[^>]*>(.*?)</table>", RegexOption.DOT_MATCHES_ALL).find(html) ?: return
+        val tableContent = tableMatch.groupValues[1]
+
+        val rowRegex = Regex("<tr[^>]*>(.*?)</tr>", RegexOption.DOT_MATCHES_ALL)
+        val cellRegex = Regex("<td[^>]*>(.*?)</td>", RegexOption.DOT_MATCHES_ALL)
+        val tagStripRegex = Regex("<[^>]+>")
+
+        val rows = rowRegex.findAll(tableContent)
+        val parsedRows = mutableListOf<List<String>>()
+
+        for (r in rows) {
+            val cells = cellRegex.findAll(r.groupValues[1]).map {
+                tagStripRegex.replace(it.groupValues[1], "").trim()
+            }.toList()
+            if (cells.size >= 9 && Regex("^\\d{1,2}:\\d{2}$").matches(cells[0])) {
+                parsedRows.add(cells)
+            }
+        }
+
+        if (parsedRows.isEmpty()) return
+
+        val tz = TimeZone.getTimeZone(Country.COSTA_RICA.timeZone)
+        val allSlots = mutableListOf<ProgramItem>()
+
+        for (dayOffset in 0..1) {
+            val cal = Calendar.getInstance(tz).apply { add(Calendar.DAY_OF_YEAR, dayOffset) }
+            val dow = cal.get(Calendar.DAY_OF_WEEK)
+            val colIndex = when (dow) {
+                Calendar.MONDAY -> 2
+                Calendar.TUESDAY -> 3
+                Calendar.WEDNESDAY -> 4
+                Calendar.THURSDAY -> 5
+                Calendar.FRIDAY -> 6
+                Calendar.SATURDAY -> 7
+                Calendar.SUNDAY -> 8
+                else -> 2
+            }
+
+            for (row in parsedRows) {
+                val startParts = row[0].split(":")
+                val endParts = row[1].split(":")
+                if (startParts.size < 2 || endParts.size < 2) continue
+
+                val startH = startParts[0].toIntOrNull() ?: continue
+                val startM = startParts[1].toIntOrNull() ?: continue
+                val endH = endParts[0].toIntOrNull() ?: continue
+                val endM = endParts[1].toIntOrNull() ?: continue
+
+                val title = if (colIndex < row.size && row[colIndex].isNotBlank()) row[colIndex] else "Programación Canal 1"
+                val cat = mapCategory(null, title)
+
+                val startCal = (cal.clone() as Calendar).apply {
+                    set(Calendar.HOUR_OF_DAY, startH)
+                    set(Calendar.MINUTE, startM)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                val endCal = (cal.clone() as Calendar).apply {
+                    if (endH == 0 && endM == 0) {
+                        add(Calendar.DAY_OF_YEAR, 1)
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                    } else if (endH < startH) {
+                        add(Calendar.DAY_OF_YEAR, 1)
+                        set(Calendar.HOUR_OF_DAY, endH)
+                        set(Calendar.MINUTE, endM)
+                    } else {
+                        set(Calendar.HOUR_OF_DAY, endH)
+                        set(Calendar.MINUTE, endM)
+                    }
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+
+                val epochStart = startCal.timeInMillis
+                val epochEnd = endCal.timeInMillis
+                val startMins = startH * 60 + startM
+                val endMins = if (endH == 0 && endM == 0) 1440 else endH * 60 + endM
+
+                allSlots.add(
+                    ProgramItem(
+                        id = "${targetChannel.id}_$epochStart",
+                        title = title,
+                        description = "Transmisión oficial de Canal 1 Costa Rica.",
+                        category = cat,
+                        startTime = String.format(Locale.US, "%02d:%02d", startH, startM),
+                        endTime = String.format(Locale.US, "%02d:%02d", endH, endM),
+                        startMinutes = startMins,
+                        endMinutes = endMins,
+                        rating = "TP",
+                        epochStartMs = epochStart,
+                        epochEndMs = epochEnd,
+                        isRealEpg = true
+                    )
+                )
+            }
+        }
+
+        if (allSlots.isNotEmpty()) {
+            outPrograms[targetChannel.id] = allSlots
+            Log.d(TAG, "Canal 1 web parser: Loaded ${allSlots.size} programs directly from canal1cr.com")
+        }
+    }
+
+    private fun fetchTvSurWebsiteSchedule(
+        crChannels: List<Channel>,
+        outPrograms: MutableMap<String, MutableList<ProgramItem>>
+    ) {
+        val targetChannel = crChannels.find { it.id == "cr_tv_sur_14" } ?: return
+        val url = "https://www.tvsur.co.cr/programacion/"
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+            .build()
+
+        val response = httpClient.newCall(request).execute()
+        if (!response.isSuccessful) {
+            response.close()
+            Log.w(TAG, "TV Sur web schedule returned HTTP ${response.code}")
+            return
+        }
+
+        val html = response.body?.string() ?: return
+        val tableMatches = Regex("<table class=\"tt_timetable\">(.*?)</table>", RegexOption.DOT_MATCHES_ALL).findAll(html)
+        val eventsByDay = mutableMapOf<String, MutableList<Triple<String, String, String>>>()
+
+        val headerRegex = Regex("<th>(.*?)</th>", RegexOption.DOT_MATCHES_ALL)
+        val rowRegex = Regex("<tr[^>]*>(.*?)</tr>", RegexOption.DOT_MATCHES_ALL)
+        val cellRegex = Regex("<td[^>]*>(.*?)</td>", RegexOption.DOT_MATCHES_ALL)
+        val tagStrip = Regex("<[^>]+>")
+        val titleRegex = Regex("<span class=\"event_header\"[^>]*>(.*?)</span>", RegexOption.DOT_MATCHES_ALL)
+        val topHourRegex = Regex("<div class=\"top_hour\"><span class=\"hours\">(\\d{1,2}:\\d{2})</span>", RegexOption.DOT_MATCHES_ALL)
+        val bottomHourRegex = Regex("<div class=\"bottom_hour\"><span class=\"hours\">(\\d{1,2}:\\d{2})</span>", RegexOption.DOT_MATCHES_ALL)
+
+        for (tableMatch in tableMatches) {
+            val tableStr = tableMatch.groupValues[1]
+            val headers = headerRegex.findAll(tableStr).map { tagStrip.replace(it.groupValues[1], "").trim() }.toList()
+            val rows = rowRegex.findAll(tableStr)
+
+            for (r in rows) {
+                val cells = cellRegex.findAll(r.groupValues[1]).toList()
+                if (cells.size < 2) continue
+                val timeSlot = tagStrip.replace(cells[0].groupValues[1], "").trim()
+
+                for (dayIdx in 1 until cells.size) {
+                    val cellHtml = cells[dayIdx].groupValues[1]
+                    if (cellHtml.contains("event_container")) {
+                        val titleM = titleRegex.find(cellHtml)
+                        val topM = topHourRegex.find(cellHtml)
+                        val bottomM = bottomHourRegex.find(cellHtml)
+
+                        val title = titleM?.groupValues?.get(1)?.trim() ?: ""
+                        val start = topM?.groupValues?.get(1) ?: timeSlot
+                        val end = bottomM?.groupValues?.get(1) ?: ""
+                        val dayName = if (dayIdx < headers.size) headers[dayIdx] else ""
+
+                        if (dayName.isNotBlank() && title.isNotBlank() && Regex("^\\d{1,2}:\\d{2}$").matches(start)) {
+                            eventsByDay.getOrPut(normalizeString(dayName)) { mutableListOf() }
+                                .add(Triple(start, end, title))
+                        }
+                    }
+                }
+            }
+        }
+
+        if (eventsByDay.isEmpty()) return
+
+        val tz = TimeZone.getTimeZone(Country.COSTA_RICA.timeZone)
+        val allSlots = mutableListOf<ProgramItem>()
+
+        for (dayOffset in 0..1) {
+            val cal = Calendar.getInstance(tz).apply { add(Calendar.DAY_OF_YEAR, dayOffset) }
+            val dow = cal.get(Calendar.DAY_OF_WEEK)
+            val dayKey = when (dow) {
+                Calendar.MONDAY -> "lunes"
+                Calendar.TUESDAY -> "martes"
+                Calendar.WEDNESDAY -> "miercoles"
+                Calendar.THURSDAY -> "jueves"
+                Calendar.FRIDAY -> "viernes"
+                Calendar.SATURDAY -> "sabado"
+                Calendar.SUNDAY -> "domingo"
+                else -> "lunes"
+            }
+
+            val rawEvents = eventsByDay[dayKey]?.distinctBy { it.first + it.third }?.sortedBy { it.first }
+            if (rawEvents.isNullOrEmpty()) continue
+
+            for (i in rawEvents.indices) {
+                val ev = rawEvents[i]
+                val startParts = ev.first.split(":")
+                val startH = startParts[0].toIntOrNull() ?: continue
+                val startM = startParts[1].toIntOrNull() ?: continue
+
+                var endH = 0
+                var endM = 0
+                if (ev.second.isNotBlank() && ev.second.contains(":")) {
+                    val endParts = ev.second.split(":")
+                    endH = endParts[0].toIntOrNull() ?: 0
+                    endM = endParts[1].toIntOrNull() ?: 0
+                } else if (i + 1 < rawEvents.size) {
+                    val nextParts = rawEvents[i + 1].first.split(":")
+                    endH = nextParts[0].toIntOrNull() ?: 0
+                    endM = nextParts[1].toIntOrNull() ?: 0
+                } else {
+                    endH = (startH + 1) % 24
+                    endM = startM
+                }
+
+                val title = ev.third
+                val cat = mapCategory(null, title)
+
+                val startCal = (cal.clone() as Calendar).apply {
+                    set(Calendar.HOUR_OF_DAY, startH)
+                    set(Calendar.MINUTE, startM)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                val endCal = (cal.clone() as Calendar).apply {
+                    if (endH == 0 && endM == 0) {
+                        add(Calendar.DAY_OF_YEAR, 1)
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                    } else if (endH < startH) {
+                        add(Calendar.DAY_OF_YEAR, 1)
+                        set(Calendar.HOUR_OF_DAY, endH)
+                        set(Calendar.MINUTE, endM)
+                    } else {
+                        set(Calendar.HOUR_OF_DAY, endH)
+                        set(Calendar.MINUTE, endM)
+                    }
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+
+                val epochStart = startCal.timeInMillis
+                val epochEnd = endCal.timeInMillis
+                val startMins = startH * 60 + startM
+                val endMins = if (endH == 0 && endM == 0) 1440 else endH * 60 + endM
+
+                allSlots.add(
+                    ProgramItem(
+                        id = "${targetChannel.id}_$epochStart",
+                        title = title,
+                        description = "Transmisión oficial de TV Sur Canal 14 Pérez Zeledón.",
+                        category = cat,
+                        startTime = String.format(Locale.US, "%02d:%02d", startH, startM),
+                        endTime = String.format(Locale.US, "%02d:%02d", endH, endM),
+                        startMinutes = startMins,
+                        endMinutes = endMins,
+                        rating = "TP",
+                        epochStartMs = epochStart,
+                        epochEndMs = epochEnd,
+                        isRealEpg = true
+                    )
+                )
+            }
+        }
+
+        if (allSlots.isNotEmpty()) {
+            outPrograms[targetChannel.id] = allSlots
+            Log.d(TAG, "TV Sur web parser: Loaded ${allSlots.size} programs directly from tvsur.co.cr")
+        }
     }
 
     private fun fetchAndParseXmltv(
@@ -513,9 +833,17 @@ class EpgRepository(private val context: Context) {
                                 targetChannel.id == "cr_retrox_plus" ||
                                 targetChannel.id == "cr_retro_cartoons"
                             )
-                            // If Trivu TV or RPP already has official listings from direct Movistar Play PE scraper, don't overwrite with obsolete XMLTV
+                            // If direct scrapers (Movistar Play PE API, Canal 1 web, TV Sur web) already populated official listings, don't overwrite with obsolete XMLTV
                             val isAlreadyPopulatedFromDirectApi = targetChannel != null &&
-                                (targetChannel.id == "pe_trivu_tv" || targetChannel.id == "pe_rpp_tv") &&
+                                (targetChannel.id == "pe_trivu_tv" ||
+                                 targetChannel.id == "pe_rpp_tv" ||
+                                 targetChannel.id == "pe_sol_tv" ||
+                                 targetChannel.id == "pe_pbo_tv" ||
+                                 targetChannel.id == "pe_tv_peru" ||
+                                 targetChannel.id == "pe_tv_peru_noticias" ||
+                                 targetChannel.id == "pe_usmp_tv" ||
+                                 targetChannel.id == "cr_canal_1" ||
+                                 targetChannel.id == "cr_tv_sur_14") &&
                                 outPrograms[targetChannel.id]?.isNotEmpty() == true
 
                             if (targetChannel != null && !isProtectedGrid && !isAlreadyPopulatedFromDirectApi && !currentProgTitle.isNullOrBlank() && !currentProgStart.isNullOrBlank()) {
@@ -933,7 +1261,9 @@ class EpgRepository(private val context: Context) {
             ProgramSlot(0, 0, 2, 0, "PBO Noticias", "Resumen informativo nocturno.", TvCategory.NOTICIAS),
             ProgramSlot(2, 0, 6, 0, "PBO con Chema Salcedo", "Lo mejor de la semana con Chema Salcedo.", TvCategory.NOTICIAS, "Chema Salcedo"),
             ProgramSlot(6, 0, 10, 0, "PBO Noticias (Edición Fin de Semana)", "Resumen noticioso matutino y análisis de la semana política.", TvCategory.NOTICIAS),
-            ProgramSlot(10, 0, 14, 0, "PBO con Chema Salcedo", "Historias, cultura y actualidad con Chema Salcedo.", TvCategory.NOTICIAS, "Chema Salcedo"),
+            ProgramSlot(10, 0, 11, 0, "PBO con Chema Salcedo", "Historias, cultura y actualidad con Chema Salcedo.", TvCategory.NOTICIAS, "Chema Salcedo"),
+            ProgramSlot(11, 0, 12, 0, "La Chola Capitalista", "Humor político, actualidad y sátira social en PBO TV.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(12, 0, 14, 0, "Combutters", "El programa de debate, primicias y política conducido por Phillip Butters.", TvCategory.NOTICIAS, "Phillip Butters"),
             ProgramSlot(14, 0, 15, 30, "Rumbo Minero", "Programa especializado en minería, energía y desarrollo industrial del Perú.", TvCategory.CULTURA),
             ProgramSlot(15, 30, 16, 30, "PBO UMA Emprendedor", "Historias de emprendimiento, negocios e innovación en el Perú.", TvCategory.CULTURA),
             ProgramSlot(16, 30, 17, 30, "Vox Populi", "La voz ciudadana, denuncias y temas comunitarios de interés público.", TvCategory.NOTICIAS),
@@ -984,7 +1314,7 @@ class EpgRepository(private val context: Context) {
         val tz = TimeZone.getTimeZone(timeZoneId)
         val allItems = mutableListOf<ProgramItem>()
 
-        val dailySlots = listOf(
+        val weekdaySlots = listOf(
             ProgramSlot(0, 0, 0, 30, "Agricultura al Día", "Técnicas de cultivo, riego tecnificado y buenas prácticas agrícolas.", TvCategory.CULTURA),
             ProgramSlot(0, 30, 1, 0, "Tierra Fértil", "Reportajes sobre el potencial productivo de la tierra y suelos.", TvCategory.CULTURA),
             ProgramSlot(1, 0, 1, 30, "Guía Agropecuaria", "Consejos prácticos para el manejo eficiente de fincas y hatos ganaderos.", TvCategory.CULTURA),
@@ -1034,8 +1364,61 @@ class EpgRepository(private val context: Context) {
             ProgramSlot(23, 30, 0, 0, "Notas Destacadas", "Avances científicos y noticias destacadas del agro internacional.", TvCategory.NOTICIAS)
         )
 
+        val weekendSlots = listOf(
+            ProgramSlot(0, 0, 0, 30, "Agricultura al Día", "Técnicas de cultivo, riego tecnificado y buenas prácticas agrícolas.", TvCategory.CULTURA),
+            ProgramSlot(0, 30, 1, 0, "Tierra Fértil", "Reportajes sobre el potencial productivo de la tierra y suelos.", TvCategory.CULTURA),
+            ProgramSlot(1, 0, 1, 30, "Guía Agropecuaria", "Consejos prácticos para el manejo eficiente de fincas y hatos ganaderos.", TvCategory.CULTURA),
+            ProgramSlot(1, 30, 2, 0, "Agrolatina", "Análisis y actualidad agropecuaria y de mercados en América Latina.", TvCategory.CULTURA),
+            ProgramSlot(2, 0, 2, 30, "Redes Sociales del Campo", "Innovación digital, tecnología y comunidades rurales.", TvCategory.CULTURA),
+            ProgramSlot(2, 30, 3, 0, "Agronoticias Sie7e", "Informativo continental con noticias clave del sector agropecuario.", TvCategory.NOTICIAS),
+            ProgramSlot(3, 0, 3, 30, "Sabores de Campo", "Gastronomía rural, productos autóctonos y recetas tradicionales.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(3, 30, 4, 0, "Escuela de Campo", "Capacitación técnica para productores y manejo de plagas.", TvCategory.CULTURA),
+            ProgramSlot(4, 0, 4, 30, "Ranchos de Hoy", "Manejo ganadero moderno, bioseguridad y mejoramiento genético.", TvCategory.CULTURA),
+            ProgramSlot(4, 30, 5, 0, "Panorama Agropecuario ARG", "Tecnología de siembra directa y producción de granos.", TvCategory.CULTURA),
+            ProgramSlot(5, 0, 5, 30, "Noticias del Agro (NDA)", "Noticiero matutino: cotizaciones, clima y economía agrícola.", TvCategory.NOTICIAS),
+            ProgramSlot(5, 30, 6, 0, "Ranchos de Hoy", "Nutrición animal y producción eficiente de leche y carne.", TvCategory.CULTURA),
+            ProgramSlot(6, 0, 6, 30, "America's Heartland", "Grandes historias de innovación agrícola y familias del campo.", TvCategory.CULTURA),
+            ProgramSlot(6, 30, 7, 0, "Agricultura al Día", "Edición matutina con recomendaciones agronómicas para agricultores.", TvCategory.CULTURA),
+            ProgramSlot(7, 0, 7, 30, "Mercado Frutihortícola", "Tendencias de precios, frutas y comercialización mayorista.", TvCategory.CULTURA),
+            ProgramSlot(7, 30, 8, 0, "Notas Destacadas", "Avances científicos, biotecnología aplicada y semillas certificadas.", TvCategory.NOTICIAS),
+            ProgramSlot(8, 0, 8, 30, "Empresarios del Campo", "Emprendimientos agrícolas exitosos y modelos rurales.", TvCategory.CULTURA),
+            ProgramSlot(8, 30, 9, 0, "Equino", "Cría, cuidado, doma y razas de caballos.", TvCategory.CULTURA),
+            ProgramSlot(9, 0, 9, 30, "ABC Rural", "Capacitación agropecuaria integral, lechería y cultivos familiares.", TvCategory.CULTURA),
+            ProgramSlot(9, 30, 10, 0, "Sabores de Campo", "Gastronomía rural y productos de la tierra.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(10, 0, 10, 30, "Cuaderno Agrario", "Actualidad agrícola y gestión productiva.", TvCategory.CULTURA),
+            ProgramSlot(10, 30, 11, 30, "Agroriente", "Enfoque en cultivos de exportación y tecnología del campo.", TvCategory.CULTURA),
+            ProgramSlot(11, 30, 12, 0, "Equino", "Mundo ecuestre, nutrición y cuidados veterinarios.", TvCategory.CULTURA),
+            ProgramSlot(12, 0, 12, 30, "Noticias del Agro (NDA)", "Edición de fin de semana con las noticias más destacadas del sector.", TvCategory.NOTICIAS),
+            ProgramSlot(12, 30, 13, 0, "ABC Rural", "Tecnología agraria, cultivos y buenas prácticas pecuarias.", TvCategory.CULTURA),
+            ProgramSlot(13, 0, 13, 30, "Tierra Fértil", "Ecosistemas rurales y potencial agroecológico.", TvCategory.CULTURA),
+            ProgramSlot(13, 30, 14, 0, "Guía Agropecuaria", "Recomendaciones técnicas de campo.", TvCategory.CULTURA),
+            ProgramSlot(14, 0, 14, 30, "America's Heartland", "Familias rurales y desarrollo del agro.", TvCategory.CULTURA),
+            ProgramSlot(14, 30, 15, 0, "Agricultura al Día", "Técnicas agrícolas de alta rentabilidad.", TvCategory.CULTURA),
+            ProgramSlot(15, 0, 15, 30, "Mercado Frutihortícola", "Comercialización y calidad agroalimentaria.", TvCategory.CULTURA),
+            ProgramSlot(15, 30, 16, 0, "Notas Destacadas", "Innovación tecnológica y biotecnología aplicada.", TvCategory.NOTICIAS),
+            ProgramSlot(16, 0, 16, 30, "Empresarios del Campo", "Historias de éxito de productores rurales.", TvCategory.CULTURA),
+            ProgramSlot(16, 30, 17, 0, "Equino", "Manejo y exhibición de caballos.", TvCategory.CULTURA),
+            ProgramSlot(17, 0, 17, 30, "ABC Rural", "Información técnica para pequeños y medianos productores.", TvCategory.CULTURA),
+            ProgramSlot(17, 30, 18, 0, "In Agro", "Nuevas herramientas y maquinaria agrícola.", TvCategory.CULTURA),
+            ProgramSlot(18, 0, 18, 30, "Agronoticias Sie7e", "Resumen de noticias agrícolas del continente.", TvCategory.NOTICIAS),
+            ProgramSlot(18, 30, 19, 0, "Una Mirada Al Campo", "Documentales y tradiciones rurales.", TvCategory.CULTURA),
+            ProgramSlot(19, 0, 19, 30, "Panorama Agropecuario MÉX", "Agronegocios y cosechas.", TvCategory.CULTURA),
+            ProgramSlot(19, 30, 20, 0, "Escuela de Campo", "Talleres de capacitación para agricultores.", TvCategory.CULTURA),
+            ProgramSlot(20, 0, 20, 30, "Veracruz Agropecuario", "Proyectos agropecuarios sostenibles.", TvCategory.CULTURA),
+            ProgramSlot(20, 30, 21, 0, "Con Lo Nuestro (Esp)", "Cultura del campo y costumbres tradicionales.", TvCategory.CULTURA),
+            ProgramSlot(21, 0, 21, 30, "Noticias del Agro (NDA)", "Balance informativo nocturno.", TvCategory.NOTICIAS),
+            ProgramSlot(21, 30, 22, 0, "Ranchos de Hoy", "Ganadería y nutrición animal.", TvCategory.CULTURA),
+            ProgramSlot(22, 0, 22, 30, "America's Heartland", "Crónicas del campo internacional.", TvCategory.CULTURA),
+            ProgramSlot(22, 30, 23, 0, "Agricultura al Día", "Recomendaciones técnicas.", TvCategory.CULTURA),
+            ProgramSlot(23, 0, 23, 30, "Mercado Frutihortícola", "Precios y mercados.", TvCategory.CULTURA),
+            ProgramSlot(23, 30, 0, 0, "Notas Destacadas", "Avances científicos agropecuarios.", TvCategory.NOTICIAS)
+        )
+
         for (offset in 0..1) {
-            allItems.addAll(buildDaySchedule("cr_agrotendencia", tz, offset, dailySlots))
+            val cal = Calendar.getInstance(tz).apply { add(Calendar.DAY_OF_YEAR, offset) }
+            val dow = cal.get(Calendar.DAY_OF_WEEK)
+            val slots = if (dow == Calendar.SATURDAY || dow == Calendar.SUNDAY) weekendSlots else weekdaySlots
+            allItems.addAll(buildDaySchedule("cr_agrotendencia", tz, offset, slots))
         }
 
         return allItems
