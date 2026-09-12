@@ -36,7 +36,7 @@ class EpgRepository(private val context: Context) {
         .followRedirects(true)
         .build()
 
-    private val cacheFileName = "real_epg_cache_v11.json"
+    private val cacheFileName = "real_epg_cache_v12.json"
     private val prefs = context.getSharedPreferences("epg_repo_prefs", Context.MODE_PRIVATE)
 
     companion object {
@@ -828,7 +828,6 @@ class EpgRepository(private val context: Context) {
                             // For cr_vm_latino and Retrox channels, we strictly use their verified official grid to prevent
                             // third-party XMLTV feeds from injecting misaligned timestamps or incorrect titles
                             val isProtectedGrid = targetChannel != null && (
-                                targetChannel.id == "cr_vm_latino" ||
                                 targetChannel.id == "cr_retrox_tv" ||
                                 targetChannel.id == "cr_retrox_plus" ||
                                 targetChannel.id == "cr_retro_cartoons"
@@ -1292,7 +1291,7 @@ class EpgRepository(private val context: Context) {
             ProgramSlot(18, 0, 0, 0, "Baella Talks", "Especial dominical: entrevistas a fondo, actualidad política y análisis con Alfonso Baella.", TvCategory.NOTICIAS, "Alfonso Baella")
         )
 
-        for (offset in 0..1) {
+        for (offset in 0..3) {
             val cal = Calendar.getInstance(tz).apply { add(Calendar.DAY_OF_YEAR, offset) }
             val slots = when (cal.get(Calendar.DAY_OF_WEEK)) {
                 Calendar.MONDAY -> mondaySlots
@@ -1414,7 +1413,7 @@ class EpgRepository(private val context: Context) {
             ProgramSlot(23, 30, 0, 0, "Notas Destacadas", "Avances científicos agropecuarios.", TvCategory.NOTICIAS)
         )
 
-        for (offset in 0..1) {
+        for (offset in 0..3) {
             val cal = Calendar.getInstance(tz).apply { add(Calendar.DAY_OF_YEAR, offset) }
             val dow = cal.get(Calendar.DAY_OF_WEEK)
             val slots = if (dow == Calendar.SATURDAY || dow == Calendar.SUNDAY) weekendSlots else weekdaySlots
@@ -1488,7 +1487,7 @@ class EpgRepository(private val context: Context) {
             ProgramSlot(22, 0, 0, 0, "VM Non Stop", "Cierre del domingo con los éxitos musicales que dominan la escena juvenil.", TvCategory.MUSICA)
         )
 
-        for (offset in 0..1) {
+        for (offset in 0..3) {
             val cal = Calendar.getInstance(tz).apply { add(Calendar.DAY_OF_YEAR, offset) }
             val dow = cal.get(Calendar.DAY_OF_WEEK)
             val slots = when (dow) {
@@ -1550,7 +1549,7 @@ class EpgRepository(private val context: Context) {
             ProgramSlot(23, 0, 0, 0, "La Ley y el Orden", "Casos policiales resueltos por detectives de homicidios y procesados en la corte de justicia.", TvCategory.ENTRETENIMIENTO)
         )
 
-        for (offset in 0..1) {
+        for (offset in 0..3) {
             allItems.addAll(buildDaySchedule("cr_retrox_tv", tz, offset, dailySlots))
         }
 
@@ -1580,7 +1579,7 @@ class EpgRepository(private val context: Context) {
             ProgramSlot(22, 0, 0, 0, "Noche de Suspenso & Misterio", "Cine negro, thrillers psicológicos y misterio de culto.", TvCategory.ENTRETENIMIENTO)
         )
 
-        for (offset in 0..1) {
+        for (offset in 0..3) {
             allItems.addAll(buildDaySchedule("cr_retrox_plus", tz, offset, dailySlots))
         }
 
@@ -1619,7 +1618,7 @@ class EpgRepository(private val context: Context) {
             ProgramSlot(23, 0, 0, 0, "Batman: La Serie Animada", "El Caballero de la Noche combatiendo el crimen en Gotham City.", TvCategory.INFANTIL)
         )
 
-        for (offset in 0..1) {
+        for (offset in 0..3) {
             allItems.addAll(buildDaySchedule("cr_retro_cartoons", tz, offset, dailySlots))
         }
 

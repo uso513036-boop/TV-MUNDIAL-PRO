@@ -178,7 +178,17 @@ object ChannelRepository {
                 brandColorHex = 0xFF7B1FA2,
                 description = "El canal de la música y la juventud de Costa Rica. Conciertos, estrenos mundiales, reggaeton, pop, rock y festivales.",
                 broadcastQuality = "HD 1080p",
-                epgAliases = listOf("VMLatino.cr", "VM Latino", "Canal 29", "VM Latino Costa Rica")
+                epgAliases = listOf(
+                    "VMLatino.cr@SD",
+                    "VMLatino.cr",
+                    "Canal.VM.Latino.cr",
+                    "VM Latino",
+                    "VMLatino",
+                    "Canal 29",
+                    "VM Latino Costa Rica",
+                    "vm_latino",
+                    "VM Latino (Canal Música)"
+                )
             ),
             Channel(
                 id = "cr_canal_1",
@@ -282,7 +292,7 @@ object ChannelRepository {
                 shortName = "Retro Cartoons",
                 country = Country.COSTA_RICA,
                 category = TvCategory.INFANTIL,
-                streamUrl = "https://stream-retroxtv.site/live/retroxtv.m3u8",
+                streamUrl = "https://stream-retroxtv.site/live/retroxcartoons.m3u8",
                 backupStreamUrls = listOf(
                     "https://stream-retroxtv.site/live/retroxplus.m3u8",
                     "https://stream-retroxtv.site/live/retroxmusic.m3u8"
@@ -291,7 +301,7 @@ object ChannelRepository {
                 brandColorHex = 0xFFFF9800,
                 description = "Señal dedicada a la animación clásica de los 80s y 90s: Thundercats, He-Man, Transformers G1, Los Cazafantasmas, Mazinger Z, Looney Tunes y Don Gato.",
                 broadcastQuality = "FHD 1080p",
-                epgAliases = listOf("RetroxCartoons.cr", "RetroCartoons.cr", "Retrox Cartoons", "Retro Cartoons", "Retro Cartoons Costa Rica")
+                epgAliases = listOf("RetroxCartoons.cr@SD", "RetroxCartoons.cr", "RetroCartoons.cr", "Retrox Cartoons", "Retro Cartoons", "Retro Cartoons Costa Rica", "retroxcartoons")
             )
         )
     }
