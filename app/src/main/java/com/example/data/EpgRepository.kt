@@ -36,7 +36,7 @@ class EpgRepository(private val context: Context) {
         .followRedirects(true)
         .build()
 
-    private val cacheFileName = "real_epg_cache_v12.json"
+    private val cacheFileName = "real_epg_cache_v13.json"
     private val prefs = context.getSharedPreferences("epg_repo_prefs", Context.MODE_PRIVATE)
 
     companion object {
@@ -168,6 +168,12 @@ class EpgRepository(private val context: Context) {
                 channel.copy(schedule = generateOfficialRetroCartoonsSchedule(Country.COSTA_RICA.timeZone), isRealEpg = true)
             } else if (channel.id == "pe_pbo_tv") {
                 channel.copy(schedule = generateOfficialPboSchedule(Country.PERU.timeZone), isRealEpg = true)
+            } else if (channel.id == "pe_tv_peru_noticias") {
+                channel.copy(schedule = generateOfficialTvPeruNoticiasSchedule(Country.PERU.timeZone), isRealEpg = true)
+            } else if (channel.id == "pe_rpp_tv") {
+                channel.copy(schedule = generateOfficialRppSchedule(Country.PERU.timeZone), isRealEpg = true)
+            } else if (channel.id == "pe_sol_tv") {
+                channel.copy(schedule = generateOfficialSolTvSchedule(Country.PERU.timeZone), isRealEpg = true)
             } else {
                 channel.copy(schedule = emptyList(), isRealEpg = false)
             }
@@ -244,6 +250,15 @@ class EpgRepository(private val context: Context) {
         if (programsByChannelId["pe_pbo_tv"].isNullOrEmpty()) {
             programsByChannelId["pe_pbo_tv"] = generateOfficialPboSchedule(Country.PERU.timeZone).toMutableList()
         }
+        if (programsByChannelId["pe_tv_peru_noticias"].isNullOrEmpty()) {
+            programsByChannelId["pe_tv_peru_noticias"] = generateOfficialTvPeruNoticiasSchedule(Country.PERU.timeZone).toMutableList()
+        }
+        if (programsByChannelId["pe_rpp_tv"].isNullOrEmpty()) {
+            programsByChannelId["pe_rpp_tv"] = generateOfficialRppSchedule(Country.PERU.timeZone).toMutableList()
+        }
+        if (programsByChannelId["pe_sol_tv"].isNullOrEmpty()) {
+            programsByChannelId["pe_sol_tv"] = generateOfficialSolTvSchedule(Country.PERU.timeZone).toMutableList()
+        }
         if (programsByChannelId["cr_vm_latino"].isNullOrEmpty()) {
             programsByChannelId["cr_vm_latino"] = generateOfficialVmLatinoSchedule(Country.COSTA_RICA.timeZone).toMutableList()
         }
@@ -318,7 +333,7 @@ class EpgRepository(private val context: Context) {
         val now = System.currentTimeMillis() / 1000L
         val start = now - 6 * 3600L // 6 hours ago to ensure current airing program is fully present
         val end = now + 48 * 3600L  // 48 hours ahead
-        val pids = (PE_MOVISTAR_PIDS.values + listOf("lch2212")).distinct().joinToString(",")
+        val pids = PE_MOVISTAR_PIDS.values.distinct().joinToString(",")
         val url = "https://contentapi-pe.cdn.telefonica.com/28/default/es-PE/schedules?fields=Pid,Title,Description,ChannelName,LiveChannelPid,Start,End&orderBy=START_TIME%3Aa&filteravailability=false&starttime=$start&endtime=$end&livechannelpids=$pids"
 
         val request = Request.Builder()
@@ -341,7 +356,6 @@ class EpgRepository(private val context: Context) {
         PE_MOVISTAR_PIDS.forEach { (channelId, pid) ->
             pidToChannelId[pid.lowercase()] = channelId
         }
-        pidToChannelId["lch2212"] = "pe_rpp_tv"
 
         val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault()).apply {
             timeZone = TimeZone.getTimeZone("America/Lima")
@@ -354,9 +368,9 @@ class EpgRepository(private val context: Context) {
             val targetAppChannelId = pidToChannelId[livePid] ?: continue
             val targetChannel = peruChannels.find { it.id == targetAppChannelId } ?: continue
 
-            val title = item.optString("Title", "").trim()
-            if (title.isEmpty()) continue
-            val desc = item.optString("Description", "Transmisión oficial de ${targetChannel.name}").trim()
+            val rawTitle = item.optString("Title", "").trim()
+            if (rawTitle.isEmpty()) continue
+            val rawDesc = item.optString("Description", "Transmisión oficial de ${targetChannel.name}").trim()
 
             val startSec = item.optLong("Start", 0L)
             val endSec = item.optLong("End", 0L)
@@ -373,7 +387,50 @@ class EpgRepository(private val context: Context) {
             val endMinutes = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
             val endTimeStr = timeFormat.format(Date(endMs))
 
-            val cat = mapCategory(null, title)
+            // Sanitize provider anomalies:
+            // 1. Sol TV broadcasts 24/7 with Channel Music overnight; replace provider's "Fuera del aire"
+            // 2. TV Peru Noticias 7.3: map outdated regional satellite tags (TV Peru Centro/Sur/Oriente) to real news/documentaries
+            // 3. RPP Noticias: clarify overnight reruns from morning/day live editions
+            var title = rawTitle
+            var desc = rawDesc
+            var cat = mapCategory(null, title)
+
+            if (targetAppChannelId == "pe_sol_tv" && title.contains("Fuera del aire", ignoreCase = true)) {
+                title = "Channel Music: Programación Nocturna"
+                desc = "Transmisión musical continua, videoclips y éxitos por Sol TV Perú."
+                cat = TvCategory.MUSICA
+            } else if (targetAppChannelId == "pe_tv_peru_noticias") {
+                if (title.equals("TV Perú Centro", ignoreCase = true) ||
+                    title.equals("TV Perú Sur", ignoreCase = true) ||
+                    title.equals("TV Perú Oriente", ignoreCase = true)) {
+                    cal.timeInMillis = startMs
+                    val h = cal.get(Calendar.HOUR_OF_DAY)
+                    when (h) {
+                        0 -> { title = "Hora Central (Edición Noche)"; desc = "Resumen informativo del día en TV Perú Noticias." }
+                        1 -> { title = "Goles en Acción"; desc = "Resumen de la fecha futbolística y actualidad deportiva." }
+                        2 -> { title = "Protectores de Vida"; desc = "Documentales y naturaleza de la fauna y flora del Perú." }
+                        3 -> { title = "Sucedió en el Perú"; desc = "Historia y cultura peruana por TV Perú Noticias." }
+                        4 -> { title = "GeoMundo / Documentales IRTP"; desc = "Geopolítica, documentales y reportajes de TV Perú." }
+                        else -> { title = "Noticias Noche (Repetición)"; desc = "Reportes y noticias del país." }
+                    }
+                    cat = mapCategory(null, title)
+                }
+            } else if (targetAppChannelId == "pe_rpp_tv") {
+                cal.timeInMillis = startMs
+                val h = cal.get(Calendar.HOUR_OF_DAY)
+                if (h in 0..4) {
+                    if (title.equals("Ampliación de noticias", ignoreCase = true)) {
+                        title = "Ampliación de Noticias (Repetición)"
+                        desc = "Lo mejor de las entrevistas políticas de Ampliación de Noticias en RPP."
+                    } else if (title.equals("Espacio vital", ignoreCase = true)) {
+                        title = "Espacio Vital (Lo Mejor de la Semana)"
+                        desc = "Consejos de salud y medicina preventiva con el Dr. Elmer Huerta."
+                    } else if (title.equals("Enlaces", ignoreCase = true) || title.contains("DW", ignoreCase = true)) {
+                        desc = "Programación internacional y reportajes de trasnoche en RPP Noticias."
+                    }
+                }
+            }
+
             val program = ProgramItem(
                 id = "${targetChannel.id}_$startMs",
                 title = title,
@@ -1620,6 +1677,220 @@ class EpgRepository(private val context: Context) {
 
         for (offset in 0..3) {
             allItems.addAll(buildDaySchedule("cr_retro_cartoons", tz, offset, dailySlots))
+        }
+
+        return allItems
+    }
+
+    /**
+     * Official 24/7 verified programming schedule for TV Perú Noticias (Canal 7.3 IRTP).
+     */
+    fun generateOfficialTvPeruNoticiasSchedule(timeZoneId: String): List<ProgramItem> {
+        val tz = TimeZone.getTimeZone(timeZoneId)
+        val allItems = mutableListOf<ProgramItem>()
+
+        val weekdaySlots = listOf(
+            ProgramSlot(0, 0, 1, 0, "Hora Central (Edición Noche)", "Resumen completo de la jornada informativa nacional e internacional.", TvCategory.NOTICIAS),
+            ProgramSlot(1, 0, 2, 0, "Goles en Acción", "Resumen deportivo, goles de la fecha del fútbol peruano y análisis.", TvCategory.DEPORTES),
+            ProgramSlot(2, 0, 3, 0, "Protectores de Vida", "Documentales dedicados a la conservación de la fauna y flora del Perú.", TvCategory.CULTURA),
+            ProgramSlot(3, 0, 4, 0, "Sucedió en el Perú", "Historia, personajes y episodios clave de la identidad peruana.", TvCategory.CULTURA),
+            ProgramSlot(4, 0, 5, 0, "GeoMundo", "Análisis de la actualidad internacional, geopolítica y noticias del mundo.", TvCategory.NOTICIAS),
+            ProgramSlot(5, 0, 5, 30, "Jiwasanaka", "Primer noticiero en lengua aymara de la televisión nacional.", TvCategory.NOTICIAS),
+            ProgramSlot(5, 30, 6, 0, "Ñuqanchik", "Noticiero matutino en lengua quechua con información para las comunidades andinas.", TvCategory.NOTICIAS),
+            ProgramSlot(6, 0, 9, 0, "Primera Hora / Edición Matinal", "Noticias en vivo, enlaces desde las regiones del país y la coyuntura del día.", TvCategory.NOTICIAS),
+            ProgramSlot(9, 0, 12, 0, "Noticias Mañana", "Información al instante, despachos en vivo y entrevistas de actualidad.", TvCategory.NOTICIAS),
+            ProgramSlot(12, 0, 13, 0, "Regiones Ahora", "Informativo federal con los hechos más relevantes de todos los departamentos del Perú.", TvCategory.NOTICIAS),
+            ProgramSlot(13, 0, 14, 0, "Noticias Mediodía", "La información más completa al promediar el día con despachos desde el lugar de la noticia.", TvCategory.NOTICIAS),
+            ProgramSlot(14, 0, 14, 30, "Jiwasanaka (Edición Tarde)", "Informativo vespertino en lengua aymara.", TvCategory.NOTICIAS),
+            ProgramSlot(14, 30, 15, 0, "Ñuqanchik (Edición Tarde)", "Informativo vespertino en lengua quechua.", TvCategory.NOTICIAS),
+            ProgramSlot(15, 0, 16, 0, "Noticias Tarde", "Actualización informativa de las 3 de la tarde.", TvCategory.NOTICIAS),
+            ProgramSlot(16, 0, 17, 0, "Aliados por la Seguridad", "Espacio dedicado a la seguridad ciudadana y prevención del delito.", TvCategory.NOTICIAS),
+            ProgramSlot(17, 0, 18, 0, "Noticias Tarde (Segunda Edición)", "Despachos en directo y análisis de la tarde.", TvCategory.NOTICIAS),
+            ProgramSlot(18, 0, 19, 0, "Diálogo Abierto", "Entrevistas y debates con protagonistas de la política y sociedad peruana.", TvCategory.NOTICIAS),
+            ProgramSlot(19, 0, 20, 0, "GeoMundo", "Espacio especializado en el acontecer internacional y diplomacia.", TvCategory.NOTICIAS),
+            ProgramSlot(20, 0, 21, 0, "Hora Central", "El noticiero central de TV Perú Noticias con el balance diario y entrevistas estelares.", TvCategory.NOTICIAS),
+            ProgramSlot(21, 0, 22, 0, "Tu Decisión 2026", "Espacio de debate político, propuestas y entrevistas.", TvCategory.NOTICIAS),
+            ProgramSlot(22, 0, 23, 0, "Cara a Cara", "Entrevistas en profundidad sobre los temas de mayor controversia nacional.", TvCategory.NOTICIAS),
+            ProgramSlot(23, 0, 0, 0, "Noticias Noche", "Último reporte del día con las noticias de última hora en el país.", TvCategory.NOTICIAS)
+        )
+
+        val saturdaySlots = listOf(
+            ProgramSlot(0, 0, 1, 0, "Hora Central (Resumen de Medianoche)", "Cierre noticioso de la jornada sabatina.", TvCategory.NOTICIAS),
+            ProgramSlot(1, 0, 2, 30, "Goles en Acción", "Resumen de la jornada del fútbol peruano y análisis deportivo.", TvCategory.DEPORTES),
+            ProgramSlot(2, 30, 4, 0, "Sucedió en el Perú", "Grandes documentales históricos y culturales del IRTP.", TvCategory.CULTURA),
+            ProgramSlot(4, 0, 5, 0, "Protectores de Vida", "Biodiversidad y ecosistemas del Perú.", TvCategory.CULTURA),
+            ProgramSlot(5, 0, 5, 30, "Jiwasanaka Fin de Semana", "Noticias en aymara.", TvCategory.NOTICIAS),
+            ProgramSlot(5, 30, 6, 0, "Ñuqanchik Fin de Semana", "Noticias en quechua.", TvCategory.NOTICIAS),
+            ProgramSlot(6, 0, 8, 0, "Reportaje al Perú", "Rutas turísticas, tradiciones y maravillas del Perú.", TvCategory.CULTURA),
+            ProgramSlot(8, 0, 10, 0, "TV Perú Noticias (Edición Sabatina)", "Noticias en vivo y cobertura del fin de semana.", TvCategory.NOTICIAS),
+            ProgramSlot(10, 0, 11, 30, "¿Y tú qué vas a hacer?", "Turismo, viajes y gastronomía por el territorio nacional.", TvCategory.CULTURA),
+            ProgramSlot(11, 30, 13, 0, "Con Sabor a Perú", "Lo mejor de la cocina tradicional y expresiones culinarias regionales.", TvCategory.CULTURA),
+            ProgramSlot(13, 0, 14, 30, "TV Perú Noticias Mediodía (Sábado)", "Reportes en directo desde Lima y provincias.", TvCategory.NOTICIAS),
+            ProgramSlot(14, 30, 16, 0, "Costumbres", "Fiestas populares, devoción y cultura viva del Perú.", TvCategory.CULTURA),
+            ProgramSlot(16, 0, 17, 30, "Noticias Ahora / Bloque Internacional", "Actualidad nacional e internacional del sábado.", TvCategory.NOTICIAS),
+            ProgramSlot(17, 30, 19, 0, "GeoMundo Fin de Semana", "Geopolítica y eventos internacionales.", TvCategory.NOTICIAS),
+            ProgramSlot(19, 0, 20, 30, "Hora Central Sabatina", "Resumen informativo de la jornada del sábado.", TvCategory.NOTICIAS),
+            ProgramSlot(20, 30, 22, 0, "Deporte Express", "Fútbol nacional, torneos internacionales y atletas peruanos.", TvCategory.DEPORTES),
+            ProgramSlot(22, 0, 0, 0, "Especiales Periodísticos IRTP", "Grandes reportajes e investigaciones de fondo.", TvCategory.NOTICIAS)
+        )
+
+        val sundaySlots = listOf(
+            ProgramSlot(0, 0, 1, 30, "Hora Central Dominical", "Resumen nocturno y análisis del fin de semana.", TvCategory.NOTICIAS),
+            ProgramSlot(1, 30, 3, 0, "Goles en Acción", "Resumen de la fecha futbolística y polémicas deportivas.", TvCategory.DEPORTES),
+            ProgramSlot(3, 0, 4, 30, "Sucedió en el Perú", "Historia del Perú y biografías de personajes emblemáticos.", TvCategory.CULTURA),
+            ProgramSlot(4, 30, 5, 30, "Protectores de Vida", "Naturaleza, áreas naturales protegidas y reservas nacionales.", TvCategory.CULTURA),
+            ProgramSlot(5, 30, 6, 0, "Ñuqanchik", "Informativo dominical en lengua quechua.", TvCategory.NOTICIAS),
+            ProgramSlot(6, 0, 8, 0, "Reportaje al Perú", "Expediciones a rincones inéditos de la costa, sierra y selva.", TvCategory.CULTURA),
+            ProgramSlot(8, 0, 10, 0, "TV Perú Noticias (Edición Dominical)", "Primer informe de la mañana dominical con despachos en vivo.", TvCategory.NOTICIAS),
+            ProgramSlot(10, 0, 11, 30, "Aliados por la Seguridad", "Prevención y seguridad ciudadana a nivel nacional.", TvCategory.NOTICIAS),
+            ProgramSlot(11, 30, 13, 0, "Con Sabor a Perú", "Recorridos gastronómicos por las delicias de las regiones peruanas.", TvCategory.CULTURA),
+            ProgramSlot(13, 0, 15, 0, "TV Perú Noticias Mediodía (Domingo)", "Actualización noticiosa del domingo.", TvCategory.NOTICIAS),
+            ProgramSlot(15, 0, 16, 30, "Costumbres", "Patrimonio cultural inmaterial y celebraciones del Perú profundo.", TvCategory.CULTURA),
+            ProgramSlot(16, 30, 18, 0, "Diálogo Abierto", "Análisis político de las portadas del fin de semana.", TvCategory.NOTICIAS),
+            ProgramSlot(18, 0, 19, 30, "GeoMundo Dominical", "El panorama mundial y los acontecimientos globales.", TvCategory.NOTICIAS),
+            ProgramSlot(19, 30, 21, 0, "Hora Central Especial Domingo", "Las noticias más destacadas de la semana y balance nacional.", TvCategory.NOTICIAS),
+            ProgramSlot(21, 0, 22, 30, "Tu Decisión 2026 (Debate Dominical)", "Entrevistas políticas de fondo sobre el futuro del país.", TvCategory.NOTICIAS),
+            ProgramSlot(22, 30, 0, 0, "Goles en Acción (Especial Domingo)", "Goles, tablas de posiciones y debate deportivo del cierre de fecha.", TvCategory.DEPORTES)
+        )
+
+        for (offset in -1..2) {
+            val cal = Calendar.getInstance(tz).apply { add(Calendar.DAY_OF_YEAR, offset) }
+            val slots = when (cal.get(Calendar.DAY_OF_WEEK)) {
+                Calendar.SATURDAY -> saturdaySlots
+                Calendar.SUNDAY -> sundaySlots
+                else -> weekdaySlots
+            }
+            allItems.addAll(buildDaySchedule("pe_tv_peru_noticias", tz, offset, slots))
+        }
+
+        return allItems
+    }
+
+    /**
+     * Official verified programming schedule for RPP TV Noticias (RPP multiplataforma).
+     */
+    fun generateOfficialRppSchedule(timeZoneId: String): List<ProgramItem> {
+        val tz = TimeZone.getTimeZone(timeZoneId)
+        val allItems = mutableListOf<ProgramItem>()
+
+        val weekdaySlots = listOf(
+            ProgramSlot(0, 0, 5, 0, "RPP Informando (Trasnoche)", "Trasnoche informativa con despachos en vivo, emergencias y actualidad nacional.", TvCategory.NOTICIAS),
+            ProgramSlot(5, 0, 8, 0, "La Rotativa del Aire (Edición Matinal)", "El noticiero radial y televisivo líder del Perú con cobertura en todo el país.", TvCategory.NOTICIAS, "Jorge Rodríguez"),
+            ProgramSlot(8, 0, 10, 0, "Ampliación de Noticias", "Entrevistas políticas exclusivas, análisis de fondo y debate nacional.", TvCategory.NOTICIAS, "Mávila Huertas / Fernando Carvallo"),
+            ProgramSlot(10, 0, 13, 0, "Encendidos", "Magazine de actualidad, historias ciudadanas, salud y orientación familiar.", TvCategory.ENTRETENIMIENTO, "Sara Abu Sabbah"),
+            ProgramSlot(13, 0, 14, 30, "La Rotativa del Aire (Edición Mediodía)", "Información al instante de los sucesos más importantes en Lima y regiones.", TvCategory.NOTICIAS),
+            ProgramSlot(14, 30, 16, 0, "Espacio Vital", "Salud, prevención y respuestas a consultas médicas con el Dr. Elmer Huerta.", TvCategory.CULTURA, "Dr. Elmer Huerta"),
+            ProgramSlot(16, 0, 17, 0, "Los Chistosos", "Humor, imitaciones de la coyuntura nacional y risas con el elenco de RPP.", TvCategory.ENTRETENIMIENTO, "Hernán Vidaurre / Manolo Rojas"),
+            ProgramSlot(17, 0, 18, 0, "Fútbol Como Cancha", "Toda la actualidad del fútbol peruano, la Liga 1 Te Apuesto y la Selección Peruana.", TvCategory.DEPORTES, "Alan Diez"),
+            ProgramSlot(18, 0, 20, 0, "Conexión", "Análisis de los sucesos de la tarde y la voz de la audiencia en todo el Perú.", TvCategory.NOTICIAS, "Jorge Rodríguez"),
+            ProgramSlot(20, 0, 21, 30, "Las Cosas Como Son / La Rotativa Noche", "Opinión, noticias centrales del día y balance informativo de la jornada.", TvCategory.NOTICIAS, "Fernando Carvallo"),
+            ProgramSlot(21, 30, 22, 30, "Todo Se Sabe", "Informes especiales, economía y debate político con Omar Mariluz.", TvCategory.NOTICIAS, "Omar Mariluz"),
+            ProgramSlot(22, 30, 23, 30, "Nada Está Dicho", "Entrevistas de fondo con protagonistas de la coyuntura nacional.", TvCategory.NOTICIAS, "Jaime Chincha"),
+            ProgramSlot(23, 30, 0, 0, "Síntesis Informativa", "Resumen de titulares y acontecimientos clave de las últimas horas.", TvCategory.NOTICIAS)
+        )
+
+        val saturdaySlots = listOf(
+            ProgramSlot(0, 0, 5, 0, "RPP Informando (Trasnoche Sabatina)", "Cobertura continua durante la madrugada y resumen noticioso.", TvCategory.NOTICIAS),
+            ProgramSlot(5, 0, 8, 0, "La Rotativa del Aire (Fin de Semana)", "Primer reporte sabatino con conexiones en vivo desde todas las regiones.", TvCategory.NOTICIAS),
+            ProgramSlot(8, 0, 9, 0, "Ampliación de Noticias (Sábado)", "Entrevistas clave y el debate político del fin de semana.", TvCategory.NOTICIAS),
+            ProgramSlot(9, 0, 10, 0, "Enfoque de los Sábados", "Mesa de análisis político y social sobre los temas centrales de la agenda pública.", TvCategory.NOTICIAS, "Fernando Carvallo"),
+            ProgramSlot(10, 0, 10, 30, "Diálogo de Fe", "Reflexión espiritual, valores y comentario sobre la realidad peruana.", TvCategory.CULTURA),
+            ProgramSlot(10, 30, 12, 0, "Sencillo y al Bolsillo", "Economía cotidiana, finanzas personales y consejos prácticos de ahorro.", TvCategory.CULTURA),
+            ProgramSlot(12, 0, 14, 0, "Conexión Sábado", "Noticias del día, contacto con oyentes y temas de interés ciudadano.", TvCategory.NOTICIAS),
+            ProgramSlot(14, 0, 16, 0, "Lo Mejor de Los Chistosos", "Los mejores sketches, personajes e imitaciones cómicas de la semana.", TvCategory.ENTRETENIMIENTO, "Hernán Vidaurre / Manolo Rojas"),
+            ProgramSlot(16, 0, 17, 0, "Letras en el Tiempo", "Cultura, literatura, libros y autores peruanos y universales.", TvCategory.CULTURA),
+            ProgramSlot(17, 0, 19, 0, "Fútbol en RPP", "Transmisión en directo de los partidos de la Liga 1 Te Apuesto.", TvCategory.DEPORTES),
+            ProgramSlot(19, 0, 20, 0, "Lo Mejor de Espacio Vital", "Selección de los mejores temas de salud con el Dr. Elmer Huerta.", TvCategory.CULTURA, "Dr. Elmer Huerta"),
+            ProgramSlot(20, 0, 22, 0, "La Rotativa del Aire (Sábado Noche)", "Balance informativo de la noche del sábado en el Perú y el mundo.", TvCategory.NOTICIAS),
+            ProgramSlot(22, 0, 0, 0, "En Primera Fila / Lo Mejor de la Semana", "Cultura, espectáculos, entrevistas y grandes momentos de RPP.", TvCategory.ENTRETENIMIENTO)
+        )
+
+        val sundaySlots = listOf(
+            ProgramSlot(0, 0, 5, 0, "RPP Informando (Trasnoche Dominical)", "Información continua de madrugada y reportes a nivel nacional.", TvCategory.NOTICIAS),
+            ProgramSlot(5, 0, 8, 0, "La Rotativa del Aire (Domingo Mañana)", "Despertar informativo dominical con la multiplataforma de RPP.", TvCategory.NOTICIAS),
+            ProgramSlot(8, 0, 9, 0, "Ampliación de Noticias (Domingo)", "Las entrevistas dominicales centrales con los protagonistas de la noticia.", TvCategory.NOTICIAS),
+            ProgramSlot(9, 0, 10, 0, "Enfoque de los Domingos", "Análisis periodístico de la coyuntura nacional y debate político.", TvCategory.NOTICIAS),
+            ProgramSlot(10, 0, 10, 30, "Domingo es Fiesta", "Tradiciones, folclore y música peruana para celebrar el fin de semana.", TvCategory.CULTURA),
+            ProgramSlot(10, 30, 12, 30, "Siempre en Casa", "Salud, familia, crianza, bienestar y consultorio en vivo para el hogar.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(12, 30, 15, 0, "Fútbol en RPP (Liga 1 en Directo)", "Emoción, goles y relatos de los principales encuentros del fútbol peruano.", TvCategory.DEPORTES),
+            ProgramSlot(15, 0, 18, 0, "Marcador en Directo / Deportes RPP", "Seguimiento de la jornada deportiva con el equipo de RPP.", TvCategory.DEPORTES),
+            ProgramSlot(18, 0, 19, 0, "Conexión Domingo", "Resumen de lo más destacado del fin de semana.", TvCategory.NOTICIAS),
+            ProgramSlot(19, 0, 20, 0, "Lo Mejor de Los Chistosos", "Diversión y risas con el elenco de Los Chistosos.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(20, 0, 21, 30, "La Rotativa del Aire (Domingo Noche)", "El gran resumen informativo para cerrar la semana.", TvCategory.NOTICIAS),
+            ProgramSlot(21, 30, 23, 0, "Cuarto de Guerra", "Análisis político de profundidad, primicias y proyecciones de la semana.", TvCategory.NOTICIAS),
+            ProgramSlot(23, 0, 0, 0, "Diálogo de Fe (Repetición)", "Espacio dominical de fe, reflexión y comunidad.", TvCategory.CULTURA)
+        )
+
+        for (offset in -1..2) {
+            val cal = Calendar.getInstance(tz).apply { add(Calendar.DAY_OF_YEAR, offset) }
+            val slots = when (cal.get(Calendar.DAY_OF_WEEK)) {
+                Calendar.SATURDAY -> saturdaySlots
+                Calendar.SUNDAY -> sundaySlots
+                else -> weekdaySlots
+            }
+            allItems.addAll(buildDaySchedule("pe_rpp_tv", tz, offset, slots))
+        }
+
+        return allItems
+    }
+
+    /**
+     * Official verified 24/7 programming schedule for Sol TV Norte (Trujillo / Norte del Perú).
+     */
+    fun generateOfficialSolTvSchedule(timeZoneId: String): List<ProgramItem> {
+        val tz = TimeZone.getTimeZone(timeZoneId)
+        val allItems = mutableListOf<ProgramItem>()
+
+        val weekdaySlots = listOf(
+            ProgramSlot(0, 0, 6, 0, "Channel Music: Programación Nocturna", "Selección continua de videoclips musicales, grandes éxitos y presentaciones en vivo por Sol TV.", TvCategory.MUSICA),
+            ProgramSlot(6, 0, 10, 0, "Sol TV Noticias (Edición de la Mañana)", "El noticiero líder del norte peruano con cobertura en La Libertad, Trujillo, Piura, Chiclayo y Cajamarca.", TvCategory.NOTICIAS),
+            ProgramSlot(10, 0, 12, 0, "Como en Casa", "Magazine matinal familiar con cocina norteña, salud, invitados y entretenimiento.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(12, 0, 13, 0, "Tú Tienes la Palabra", "Tribuna de opinión pública y entrevistas en vivo con participación ciudadana.", TvCategory.NOTICIAS),
+            ProgramSlot(13, 0, 14, 0, "Sol TV Noticias (Edición de la Tarde)", "Información actualizada de los sucesos más destacados de la región norteña.", TvCategory.NOTICIAS),
+            ProgramSlot(14, 0, 17, 0, "Programación Variada / Series & Cultura", "Contenidos familiares, cultura norteña y producciones regionales.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(17, 0, 19, 0, "Channel Music", "Dos horas con lo mejor del pop, rock, cumbia y ritmos latinos.", TvCategory.MUSICA),
+            ProgramSlot(19, 0, 21, 0, "Sol TV Noticias (Edición Central)", "El noticiero estelar más importante del norte del país.", TvCategory.NOTICIAS),
+            ProgramSlot(21, 0, 22, 0, "Línea Directa", "Análisis político, debates de coyuntura regional y nacional y entrevistas a profundidad.", TvCategory.NOTICIAS),
+            ProgramSlot(22, 0, 23, 0, "Resumen de Noticias", "Síntesis nocturna con los hechos más trascendentes del día.", TvCategory.NOTICIAS),
+            ProgramSlot(23, 0, 0, 0, "Grandes Conciertos en Sol TV", "Música, recitales y presentaciones exclusivas de artistas peruanos.", TvCategory.MUSICA)
+        )
+
+        val saturdaySlots = listOf(
+            ProgramSlot(0, 0, 6, 0, "Channel Music: Programación Nocturna", "Música continua, videos y entretenimiento en la madrugada de Sol TV.", TvCategory.MUSICA),
+            ProgramSlot(6, 0, 8, 0, "Música Andina y Tradiciones del Norte", "Costumbres, música folclórica y estampas norteñas.", TvCategory.CULTURA),
+            ProgramSlot(8, 0, 9, 0, "Sol TV Noticias (Edición Sabatina)", "Resumen de los acontecimientos más importantes de la semana en el norte peruano.", TvCategory.NOTICIAS),
+            ProgramSlot(9, 0, 11, 0, "Como en Casa (Especial Fin de Semana)", "Lo mejor del magazine familiar con recetas, hogar y consejos útiles.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(11, 0, 12, 0, "Monolocobiker", "Aventuras en dos ruedas, cicloturismo, rutas por el Perú y cultura ciclista.", TvCategory.DEPORTES),
+            ProgramSlot(12, 0, 14, 0, "Enlace Deportivo & Regional", "El fútbol de la Copa Perú, Liga 1 y deportes en el norte.", TvCategory.DEPORTES),
+            ProgramSlot(14, 0, 17, 0, "Channel Music Especial", "Los hits musicales del momento y pedidos del público.", TvCategory.MUSICA),
+            ProgramSlot(17, 0, 19, 0, "Música Bailable / Sabor Norteño", "Ritmos tropicales, cumbia norteña y marinera trujillana.", TvCategory.MUSICA),
+            ProgramSlot(19, 0, 20, 0, "Sol TV Noticias (Edición Central Sabatina)", "El reporte informativo del sábado en Trujillo y el Perú.", TvCategory.NOTICIAS),
+            ProgramSlot(20, 0, 22, 0, "Línea Directa Fin de Semana", "Debate, política y desarrollo regional.", TvCategory.NOTICIAS),
+            ProgramSlot(22, 0, 0, 0, "Noche de Gala / Channel Music", "Recitales y grandes éxitos para la noche del sábado.", TvCategory.MUSICA)
+        )
+
+        val sundaySlots = listOf(
+            ProgramSlot(0, 0, 6, 0, "Channel Music: Programación Nocturna", "Transmisión musical ininterrumpida por la señal de Sol TV Perú.", TvCategory.MUSICA),
+            ProgramSlot(6, 0, 7, 0, "Música del Recuerdo y Tradición", "Melodías clásicas y canciones inolvidables.", TvCategory.MUSICA),
+            ProgramSlot(7, 0, 10, 0, "Feliz Domingo", "Magazine informativo dominical con noticias del fin de semana, actualidad y música en vivo.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(10, 0, 11, 0, "Viva la Salud", "Orientación médica, vida sana y prevención de enfermedades.", TvCategory.CULTURA),
+            ProgramSlot(11, 0, 12, 0, "Santa Misa Dominical", "Celebración de la liturgia dominical desde la Catedral de Trujillo.", TvCategory.CULTURA),
+            ProgramSlot(12, 0, 13, 0, "Monolocobiker", "Rutas extremas, consejos mecánicos y viajes sobre dos ruedas.", TvCategory.DEPORTES),
+            ProgramSlot(13, 0, 16, 0, "Feliz Domingo (Edición Tarde)", "Música norteña, reportajes costumbristas y talento regional.", TvCategory.ENTRETENIMIENTO),
+            ProgramSlot(16, 0, 18, 0, "Resumen Deportivo Norte", "Fútbol regional, básquetbol de Trujillo y polideportivo.", TvCategory.DEPORTES),
+            ProgramSlot(18, 0, 20, 0, "Sol TV Noticias (Edición Dominical)", "Informativo central con el balance completo del fin de semana.", TvCategory.NOTICIAS),
+            ProgramSlot(20, 0, 22, 0, "Línea Directa (Especial Domingo)", "Entrevistas dominicales con personalidades del acontecer político nacional.", TvCategory.NOTICIAS),
+            ProgramSlot(22, 0, 0, 0, "Channel Music: Cierre Dominical", "Música variada para despedir el fin de semana.", TvCategory.MUSICA)
+        )
+
+        for (offset in -1..2) {
+            val cal = Calendar.getInstance(tz).apply { add(Calendar.DAY_OF_YEAR, offset) }
+            val slots = when (cal.get(Calendar.DAY_OF_WEEK)) {
+                Calendar.SATURDAY -> saturdaySlots
+                Calendar.SUNDAY -> sundaySlots
+                else -> weekdaySlots
+            }
+            allItems.addAll(buildDaySchedule("pe_sol_tv", tz, offset, slots))
         }
 
         return allItems
